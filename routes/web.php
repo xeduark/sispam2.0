@@ -88,8 +88,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/pacientes/importar', [PacientesController::class, 'importar'])
         ->middleware('role:Administrador,empresa,usuarios')->name('pacientes.importar');
 
-    Route::get('/usuarios', [UsuariosController::class, 'index'])
-        ->middleware('role:Administrador')->name('usuarios.index');
+    Route::middleware('role:Administrador')->group(function () {
+        Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
+        Route::post('/usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
+        Route::put('/usuarios/{usuario}', [UsuariosController::class, 'update'])->name('usuarios.update');
+        Route::post('/usuarios/{usuario}/toggle', [UsuariosController::class, 'toggleEstado'])->name('usuarios.toggle');
+        Route::post('/usuarios/permisos', [UsuariosController::class, 'guardarMatrizPermisos'])->name('usuarios.permisos');
+    });
 
     Route::middleware('role:Administrador')->group(function () {
         Route::get('/modulos', [ModulosController::class, 'index'])->name('modulos.index');
