@@ -282,6 +282,144 @@ class IngresoService
         return $relDir.$nombre;
     }
 
+    /**
+     * Los 5 reportes, portados como query builder + joins (mismo shape de fila
+     * plana p.*, i.* que devolvía el PDO legacy, para no tocar las vistas).
+     */
+    public function reportePacientes(?string $fechaDesde, ?string $fechaHasta, ?string $eps, ?string $estado): array
+    {
+        $q = DB::table('ingresos as i')
+            ->join('pacientes as p', 'i.paciente_id', '=', 'p.id')
+            ->join('usuarios as u', 'i.orientador_id', '=', 'u.id')
+            ->selectRaw('p.*, i.*, i.id as id, u.nombre_completo as orientador_nombre');
+
+        if ($fechaDesde) {
+            $q->whereDate('i.fecha_ingreso', '>=', $fechaDesde);
+        }
+        if ($fechaHasta) {
+            $q->whereDate('i.fecha_ingreso', '<=', $fechaHasta);
+        }
+        if ($eps) {
+            $q->where('p.eps_nombre', $eps);
+        }
+        if ($estado) {
+            $q->where('i.estado_tramite', $estado);
+        }
+
+        return $q->orderByDesc('i.fecha_ingreso')->get()->all();
+    }
+
+    public function reporteTiemposSLA(?string $fechaDesde, ?string $fechaHasta): array
+    {
+        $q = DB::table('ingresos as i')
+            ->join('pacientes as p', 'i.paciente_id', '=', 'p.id')
+            ->join('usuarios as u', 'i.orientador_id', '=', 'u.id')
+            ->leftJoin('sedes as s', 'i.sede_id', '=', 's.id')
+            ->leftJoin('empresa_config as ec', 'ec.id', '=', DB::raw('1'))
+            ->selectRaw("
+                i.id as id, i.ticket_numero, i.fecha_ingreso, i.updated_at as fecha_finalizacion,
+                i.estado_tramite, i.modulo_entrega_asignado, i.prioridad,
+                p.tipo_documento, p.numero_documento, p.nombres, p.apellidos, p.eps_nombre,
+                u.nombre_completo as orientador_nombre,
+                COALESCE(s.hora_apertura_atencion, ec.hora_apertura_atencion, '07:20:00') as hora_apertura_oficial
+            ");
+
+        if ($fechaDesde) {
+            $q->whereDate('i.fecha_ingreso', '>=', $fechaDesde);
+        }
+        if ($fechaHasta) {
+            $q->whereDate('i.fecha_ingreso', '<=', $fechaHasta);
+        }
+
+        $resultados = $q->orderByDesc('i.fecha_ingreso')->get();
+
+        foreach ($resultados as $r) {
+            try {
+                $fechaIngreso = new \DateTime($r->fecha_ingreso);
+                $fechaFinal = $r->fecha_finalizacion ? new \DateTime($r->fecha_finalizacion) : new \DateTime();
+                $horaApertura = new \DateTime($fechaIngreso->format('Y-m-d').' '.($r->hora_apertura_oficial ?: '07:20:00'));
+
+                $r->tiempo_total_minutos = round(max(0, $fechaFinal->getTimestamp() - $fechaIngreso->getTimestamp()) / 60, 1);
+
+                if ($fechaIngreso < $horaApertura) {
+                    $r->tiempo_fila_externa_min = round(max(0, min($fechaFinal->getTimestamp(), $horaApertura->getTimestamp()) - $fechaIngreso->getTimestamp()) / 60, 1);
+                    $r->tiempo_tramite_farmacia_min = round(max(0, $fechaFinal->getTimestamp() - $horaApertura->getTimestamp()) / 60, 1);
+                    $r->ingresado_antes_apertura = true;
+                } else {
+                    $r->tiempo_fila_externa_min = 0;
+                    $r->tiempo_tramite_farmacia_min = $r->tiempo_total_minutos;
+                    $r->ingresado_antes_apertura = false;
+                }
+            } catch (\Exception $e) {
+                $r->tiempo_total_minutos = 0;
+                $r->tiempo_fila_externa_min = 0;
+                $r->tiempo_tramite_farmacia_min = 0;
+                $r->ingresado_antes_apertura = false;
+            }
+        }
+
+        return $resultados->all();
+    }
+
+    public function reportePendientes(?string $fechaDesde, ?string $fechaHasta): array
+    {
+        $q = DB::table('ingresos as i')
+            ->join('pacientes as p', 'i.paciente_id', '=', 'p.id')
+            ->join('usuarios as u', 'i.orientador_id', '=', 'u.id')
+            ->selectRaw('p.*, i.*, i.id as id, u.nombre_completo as orientador_nombre')
+            ->where(function ($w) {
+                $w->whereIn('i.estado_tramite', ['TRANSCRITO_PENDIENTE', 'SIN_STOCK'])
+                    ->orWhere(fn ($w2) => $w2->whereNotNull('i.observaciones_pendientes')->where('i.observaciones_pendientes', '!=', ''));
+            });
+
+        if ($fechaDesde) {
+            $q->whereDate('i.fecha_ingreso', '>=', $fechaDesde);
+        }
+        if ($fechaHasta) {
+            $q->whereDate('i.fecha_ingreso', '<=', $fechaHasta);
+        }
+
+        return $q->orderByDesc('i.fecha_ingreso')->get()->all();
+    }
+
+    public function reporteProductividad(?string $fechaDesde, ?string $fechaHasta): array
+    {
+        $q = DB::table('usuarios as u')
+            ->join('roles as r', 'u.rol_id', '=', 'r.id')
+            ->leftJoin('ingresos as i', 'i.orientador_id', '=', 'u.id');
+
+        if ($fechaDesde || $fechaHasta) {
+            if ($fechaDesde) {
+                $q->whereDate('i.fecha_ingreso', '>=', $fechaDesde);
+            }
+            if ($fechaHasta) {
+                $q->whereDate('i.fecha_ingreso', '<=', $fechaHasta);
+            }
+        }
+
+        return $q->selectRaw('u.nombre_completo, r.nombre as rol, COUNT(i.id) as total_ingresos')
+            ->groupBy('u.id', 'u.nombre_completo', 'r.nombre')
+            ->orderByDesc('total_ingresos')
+            ->get()->all();
+    }
+
+    public function reportePorEPS(?string $fechaDesde, ?string $fechaHasta): array
+    {
+        $q = DB::table('ingresos as i')->join('pacientes as p', 'i.paciente_id', '=', 'p.id');
+
+        if ($fechaDesde) {
+            $q->whereDate('i.fecha_ingreso', '>=', $fechaDesde);
+        }
+        if ($fechaHasta) {
+            $q->whereDate('i.fecha_ingreso', '<=', $fechaHasta);
+        }
+
+        return $q->selectRaw('p.eps_nombre, COUNT(i.id) as total_pacientes')
+            ->groupBy('p.eps_nombre')
+            ->orderByDesc('total_pacientes')
+            ->get()->all();
+    }
+
     /** Lista de trabajo de Transcripción. */
     public function listaTranscripcion(): Collection
     {
