@@ -127,11 +127,17 @@ class IngresoService
         return true;
     }
 
-    public function liberar(int $ingresoId, ?int $usuarioId = null): void
+    /**
+     * Libera el bloqueo. Con $forzado=true (solo Administrador) libera sin
+     * importar quién lo tenga: el botón "Forzar Desbloqueo" ya existía en la UI
+     * legacy pero llamaba al mismo unlockRecord() con chequeo de dueño, así que
+     * nunca liberaba el registro de otro usuario. Se conecta aquí de verdad.
+     */
+    public function liberar(int $ingresoId, ?int $usuarioId = null, bool $forzado = false): void
     {
         $query = Ingreso::where('id', $ingresoId);
 
-        if ($usuarioId !== null) {
+        if (! $forzado && $usuarioId !== null) {
             $query->where('locked_by_user_id', $usuarioId);
         }
 
@@ -139,6 +145,26 @@ class IngresoService
             'locked_by_user_id' => null,
             'locked_at' => null,
             'estado_tramite' => DB::raw("IF(estado_tramite = 'EN_TRANSCRIPCION', 'INGRESADO', estado_tramite)"),
+        ]);
+    }
+
+    /** Guarda el PDF de la orden transcrita y pasa el ingreso a Alistamiento. */
+    public function guardarTranscripcion(Ingreso $ingreso, ?\Illuminate\Http\UploadedFile $pdf = null): void
+    {
+        $rutaPdf = $ingreso->pdf_transcripcion_url;
+
+        if ($pdf && $pdf->isValid()) {
+            $relDir = "assets/uploads/pacientes/{$ingreso->paciente->tipo_documento}_{$ingreso->paciente->numero_documento}/transcripciones/";
+            $nombre = 'transcripcion_'.$ingreso->ticket_numero.'_'.time().'.pdf';
+            $pdf->move(public_path($relDir), $nombre);
+            $rutaPdf = $relDir.$nombre;
+        }
+
+        $ingreso->update([
+            'estado_tramite' => 'TRANSCRITO_COMPLETO',
+            'pdf_transcripcion_url' => $rutaPdf,
+            'locked_by_user_id' => null,
+            'locked_at' => null,
         ]);
     }
 

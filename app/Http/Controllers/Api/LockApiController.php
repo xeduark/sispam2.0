@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Ingreso;
 use App\Services\IngresoService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class LockApiController extends Controller
 {
@@ -25,9 +26,11 @@ class LockApiController extends Controller
         ]);
     }
 
-    public function liberar(Ingreso $ingreso): JsonResponse
+    public function liberar(Request $request, Ingreso $ingreso): JsonResponse
     {
-        $this->ingresos->liberar($ingreso->id, auth()->id());
+        $forzado = $request->boolean('force') && auth()->user()->esAdministrador();
+
+        $this->ingresos->liberar($ingreso->id, auth()->id(), $forzado);
 
         return response()->json(['status' => 'ok', 'message' => 'Registro liberado']);
     }

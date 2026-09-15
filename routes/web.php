@@ -59,8 +59,12 @@ Route::middleware('auth')->group(function () {
     Route::match(['get', 'post'], '/ingreso', [IngresoController::class, 'index'])
         ->middleware('role:ingreso')->name('ingreso.index');
 
-    Route::get('/transcripcion', [TranscripcionController::class, 'index'])
-        ->middleware('role:transcripcion')->name('transcripcion.index');
+    Route::middleware('role:transcripcion')->group(function () {
+        Route::get('/transcripcion', [TranscripcionController::class, 'index'])->name('transcripcion.index');
+        Route::get('/transcripcion/lista', [TranscripcionController::class, 'lista'])->name('transcripcion.lista');
+        Route::get('/transcripcion/{ingreso}/detalle', [TranscripcionController::class, 'detalle'])->name('transcripcion.detalle');
+        Route::post('/transcripcion', [TranscripcionController::class, 'guardarTranscripcion'])->name('transcripcion.guardar');
+    });
 
     Route::get('/alistamiento', [AlistamientoController::class, 'index'])
         ->middleware('role:alistamiento')->name('alistamiento.index');
