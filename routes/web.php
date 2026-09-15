@@ -85,8 +85,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/empresa/sedes/{sede}', [EmpresaController::class, 'actualizarSede'])->name('empresa.sedes.update');
     });
 
-    Route::get('/pacientes/importar', [PacientesController::class, 'importar'])
-        ->middleware('role:Administrador,empresa,usuarios')->name('pacientes.importar');
+    Route::middleware('role:Administrador,empresa,usuarios')->group(function () {
+        Route::get('/pacientes/importar', [PacientesController::class, 'importar'])->name('pacientes.importar');
+        Route::get('/pacientes/plantilla', [PacientesController::class, 'descargarPlantilla'])->name('pacientes.plantilla');
+        Route::post('/pacientes/importar', [PacientesController::class, 'procesar'])->name('pacientes.procesar');
+    });
 
     Route::middleware('role:Administrador')->group(function () {
         Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
