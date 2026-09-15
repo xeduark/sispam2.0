@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    Route::get('/ingreso', [IngresoController::class, 'index'])
+    Route::match(['get', 'post'], '/ingreso', [IngresoController::class, 'index'])
         ->middleware('role:ingreso')->name('ingreso.index');
 
     Route::get('/transcripcion', [TranscripcionController::class, 'index'])
