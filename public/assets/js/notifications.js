@@ -8,8 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     checkNotificaciones();
 });
 
+function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+}
+
 function checkNotificaciones() {
-    fetch('api/notificaciones.php')
+    fetch('/api/notificaciones')
         .then(response => response.json())
         .then(data => {
             if (Array.isArray(data) && data.length > 0) {
@@ -63,12 +67,9 @@ function mostrarToastNotificacion(notif) {
 }
 
 function marcarLeido(id) {
-    const formData = new FormData();
-    formData.append('action', 'marcar_leido');
-    formData.append('id', id);
-    fetch('api/notificaciones.php', {
+    fetch(`/api/notificaciones/${id}/leida`, {
         method: 'POST',
-        body: formData
+        headers: { 'X-CSRF-TOKEN': csrfToken(), 'Accept': 'application/json' }
     });
 }
 

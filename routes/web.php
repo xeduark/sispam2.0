@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\AlistamientoController;
+use App\Http\Controllers\Api\LockApiController;
+use App\Http\Controllers\Api\NotificacionApiController;
+use App\Http\Controllers\Api\PacienteApiController;
+use App\Http\Controllers\Api\TurneroApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpresaController;
@@ -29,6 +33,24 @@ Route::get('/turnero2', [TurneroController::class, 'dos'])->name('turnero.dos');
 // Sin middleware auth: con ?rawbt=1 lo pide la app externa de impresión térmica,
 // que no manda cookie de sesión. El controller exige sesión en los demás casos.
 Route::get('/ingreso/{ingreso}/ticket', [IngresoController::class, 'ticket'])->name('ingreso.ticket');
+
+/*
+ * Endpoints JSON. Van en web.php (no en routes/api.php) a propósito: usan la
+ * misma sesión de cookies que el resto de la app, igual que el sistema legacy,
+ * y así no hace falta montar Sanctum ni tokens para nada.
+ */
+Route::prefix('api')->name('api.')->group(function () {
+    // Pantalla pública de sala de espera, sin autenticación.
+    Route::get('/turnero-data', [TurneroApiController::class, 'data'])->name('turnero.data');
+
+    Route::middleware('auth')->group(function () {
+        Route::get('/pacientes/buscar', [PacienteApiController::class, 'buscar'])->name('pacientes.buscar');
+        Route::post('/ingresos/{ingreso}/lock', [LockApiController::class, 'bloquear'])->name('ingresos.lock');
+        Route::delete('/ingresos/{ingreso}/lock', [LockApiController::class, 'liberar'])->name('ingresos.unlock');
+        Route::get('/notificaciones', [NotificacionApiController::class, 'index'])->name('notificaciones.index');
+        Route::post('/notificaciones/{notificacion}/leida', [NotificacionApiController::class, 'marcarLeido'])->name('notificaciones.leida');
+    });
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
