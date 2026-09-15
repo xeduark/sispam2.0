@@ -1,3 +1,4 @@
 # Datos reales de pacientes (PHI) - nunca versionar
 /assets/uploads/pacientes/*
 !/assets/uploads/pacientes/.gitkeep
+_backups/
