@@ -33,6 +33,7 @@ Route::get('/turnero2', [TurneroController::class, 'dos'])->name('turnero.dos');
 // Sin middleware auth: con ?rawbt=1 lo pide la app externa de impresión térmica,
 // que no manda cookie de sesión. El controller exige sesión en los demás casos.
 Route::get('/ingreso/{ingreso}/ticket', [IngresoController::class, 'ticket'])->name('ingreso.ticket');
+Route::get('/alistamiento/{ingreso}/ticket', [AlistamientoController::class, 'ticket'])->name('alistamiento.ticket');
 
 /*
  * Endpoints JSON. Van en web.php (no en routes/api.php) a propósito: usan la
@@ -66,8 +67,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/transcripcion', [TranscripcionController::class, 'guardarTranscripcion'])->name('transcripcion.guardar');
     });
 
-    Route::get('/alistamiento', [AlistamientoController::class, 'index'])
-        ->middleware('role:alistamiento')->name('alistamiento.index');
+    Route::middleware('role:alistamiento')->group(function () {
+        Route::get('/alistamiento', [AlistamientoController::class, 'index'])->name('alistamiento.index');
+        Route::get('/alistamiento/lista', [AlistamientoController::class, 'lista'])->name('alistamiento.lista');
+        Route::get('/alistamiento/{ingreso}/detalle', [AlistamientoController::class, 'detalle'])->name('alistamiento.detalle');
+        Route::post('/alistamiento', [AlistamientoController::class, 'guardar'])->name('alistamiento.guardar');
+    });
 
     Route::get('/entrega', [EntregaController::class, 'index'])
         ->middleware('role:entrega')->name('entrega.index');

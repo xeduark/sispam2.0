@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Ingreso;
+use App\Models\ModuloEntrega;
 use App\Models\Paciente;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
@@ -166,6 +167,69 @@ class IngresoService
             'locked_by_user_id' => null,
             'locked_at' => null,
         ]);
+    }
+
+    /**
+     * Reparte los ingresos ALISTADOs entre los módulos activos, asignando el
+     * que tenga menos carga (al azar entre empates). Portado tal cual.
+     */
+    public function obtenerModuloEquitativo(): array
+    {
+        $modulos = ModuloEntrega::activos()->get();
+
+        if ($modulos->isEmpty()) {
+            return ['modulo' => 'Ventanilla 1', 'cola_actual' => 0];
+        }
+
+        $conteos = Ingreso::where('estado_tramite', 'ALISTADO')
+            ->selectRaw('modulo_entrega_asignado, COUNT(*) as total')
+            ->groupBy('modulo_entrega_asignado')
+            ->pluck('total', 'modulo_entrega_asignado');
+
+        $colas = $modulos->mapWithKeys(fn (ModuloEntrega $m) => [$m->nombre => (int) ($conteos[$m->nombre] ?? 0)]);
+
+        $minimo = $colas->min();
+        $menosCargados = $colas->filter(fn ($cant) => $cant === $minimo)->keys();
+
+        return [
+            'modulo' => $menosCargados[array_rand($menosCargados->all())],
+            'cola_actual' => $minimo,
+        ];
+    }
+
+    /** Sube el PDF de empaque, asigna módulo de entrega y pasa el ingreso a ALISTADO. */
+    public function guardarAlistamiento(
+        Ingreso $ingreso,
+        ?UploadedFile $pdf,
+        string $faltantesText,
+        int $usuarioId,
+        string $moduloEntrega = 'AUTO'
+    ): string {
+        $rutaPdf = $ingreso->pdf_alistamiento;
+
+        if ($pdf && $pdf->isValid()) {
+            $relDir = "assets/uploads/pacientes/{$ingreso->paciente->tipo_documento}_{$ingreso->paciente->numero_documento}/alistamientos/";
+            $nombre = 'alistamiento_'.$ingreso->ticket_numero.'_'.time().'.pdf';
+            $pdf->move(public_path($relDir), $nombre);
+            $rutaPdf = $relDir.$nombre;
+        }
+
+        if (empty($moduloEntrega) || strtoupper(trim($moduloEntrega)) === 'AUTO') {
+            $moduloEntrega = $this->obtenerModuloEquitativo()['modulo'];
+        }
+
+        $ingreso->update([
+            'estado_tramite' => 'ALISTADO',
+            'pdf_alistamiento' => $rutaPdf,
+            'faltantes_alistamiento' => $faltantesText ?: null,
+            'alistado_por_user_id' => $usuarioId,
+            'fecha_alistado' => now(),
+            'modulo_entrega_asignado' => $moduloEntrega,
+            'locked_by_user_id' => null,
+            'locked_at' => null,
+        ]);
+
+        return $moduloEntrega;
     }
 
     /** Lista de trabajo de Transcripción. */
