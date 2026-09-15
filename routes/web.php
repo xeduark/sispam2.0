@@ -26,6 +26,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::get('/turnero1', [TurneroController::class, 'uno'])->name('turnero.uno');
 Route::get('/turnero2', [TurneroController::class, 'dos'])->name('turnero.dos');
 
+// Sin middleware auth: con ?rawbt=1 lo pide la app externa de impresión térmica,
+// que no manda cookie de sesión. El controller exige sesión en los demás casos.
+Route::get('/ingreso/{ingreso}/ticket', [IngresoController::class, 'ticket'])->name('ingreso.ticket');
+
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index']);
@@ -41,6 +45,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/entrega', [EntregaController::class, 'index'])
         ->middleware('role:entrega')->name('entrega.index');
+
+    Route::get('/entrega/{ingreso}/acta', [EntregaController::class, 'acta'])->name('entrega.acta');
 
     Route::get('/reportes', [ReportesController::class, 'index'])
         ->middleware('role:reportes')->name('reportes.index');
