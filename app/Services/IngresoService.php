@@ -232,6 +232,56 @@ class IngresoService
         return $moduloEntrega;
     }
 
+    /**
+     * Guarda firma digital (siempre base64) y foto del paciente (cámara web en
+     * base64, o archivo subido) y marca el ingreso como ENTREGADO. Portado tal
+     * cual, incluida la prioridad base64-cámara sobre archivo-subido.
+     */
+    public function finalizarEntrega(
+        Ingreso $ingreso,
+        string $firmaBase64,
+        ?string $fotoBase64 = null,
+        ?UploadedFile $fotoArchivo = null
+    ): void {
+        $ingreso->loadMissing('paciente');
+        $carpeta = "assets/uploads/pacientes/{$ingreso->paciente->tipo_documento}_{$ingreso->paciente->numero_documento}";
+
+        $rutaFirma = $this->guardarImagenBase64($firmaBase64, "{$carpeta}/firmas/", 'firma_'.$ingreso->ticket_numero.'_'.time().'.png');
+
+        $rutaFoto = null;
+        if ($fotoBase64) {
+            $rutaFoto = $this->guardarImagenBase64($fotoBase64, "{$carpeta}/fotos/", 'foto_paciente_'.$ingreso->ticket_numero.'_'.time().'.jpg');
+        } elseif ($fotoArchivo && $fotoArchivo->isValid()) {
+            $relDir = "{$carpeta}/fotos/";
+            $nombre = 'foto_paciente_'.$ingreso->ticket_numero.'_'.time().'.'.$fotoArchivo->getClientOriginalExtension();
+            $fotoArchivo->move(public_path($relDir), $nombre);
+            $rutaFoto = $relDir.$nombre;
+        }
+
+        $ingreso->update([
+            'estado_tramite' => 'ENTREGADO',
+            'firma_paciente_url' => $rutaFirma,
+            'foto_paciente_url' => $rutaFoto ?? $ingreso->foto_paciente_url,
+        ]);
+    }
+
+    private function guardarImagenBase64(string $dataUri, string $relDir, string $nombre): ?string
+    {
+        if (! str_starts_with($dataUri, 'data:image')) {
+            return null;
+        }
+
+        [, $datosBase64] = explode(',', $dataUri, 2);
+        $bytes = base64_decode($datosBase64);
+
+        if (! is_dir(public_path($relDir))) {
+            mkdir(public_path($relDir), 0755, true);
+        }
+        file_put_contents(public_path($relDir.$nombre), $bytes);
+
+        return $relDir.$nombre;
+    }
+
     /** Lista de trabajo de Transcripción. */
     public function listaTranscripcion(): Collection
     {

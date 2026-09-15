@@ -74,8 +74,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/alistamiento', [AlistamientoController::class, 'guardar'])->name('alistamiento.guardar');
     });
 
-    Route::get('/entrega', [EntregaController::class, 'index'])
-        ->middleware('role:entrega')->name('entrega.index');
+    Route::middleware('role:entrega')->group(function () {
+        Route::get('/entrega', [EntregaController::class, 'index'])->name('entrega.index');
+        Route::post('/entrega', [EntregaController::class, 'finalizar'])->name('entrega.finalizar');
+    });
 
     Route::get('/entrega/{ingreso}/acta', [EntregaController::class, 'acta'])->name('entrega.acta');
 
