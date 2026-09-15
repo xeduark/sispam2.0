@@ -26,6 +26,13 @@ class Usuario extends Authenticatable
         return $this->password_hash;
     }
 
+    // La columna de contraseña heredada no se llama 'password'; sin esto el
+    // rehash automático de Laravel escribiría en una columna inexistente.
+    public function getAuthPasswordName(): string
+    {
+        return 'password_hash';
+    }
+
     // La tabla usuarios no tiene columna remember_token.
     public function getRememberTokenName(): ?string
     {

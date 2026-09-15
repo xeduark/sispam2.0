@@ -1,0 +1,112 @@
+/* Sidebar SISPAM: fijo en escritorio, offcanvas de Bootstrap en móvil. */
+
+:root {
+    --sispam-sidebar-w: 260px;
+    --sispam-sidebar-bg: #111827;
+    --sispam-sidebar-hover: rgba(255, 255, 255, .08);
+    --sispam-sidebar-active: #0284c7;
+}
+
+.sispam-body {
+    background-color: #f1f5f9;
+}
+
+.sispam-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: var(--sispam-sidebar-w);
+    flex-shrink: 0;
+    background: var(--sispam-sidebar-bg);
+    padding: 1rem .75rem;
+    gap: .5rem;
+}
+
+/* El sidebar de escritorio acompaña el scroll de la página. */
+aside.sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-offcanvas {
+    width: var(--sispam-sidebar-w) !important;
+}
+
+.sispam-content {
+    flex: 1 1 auto;
+    min-width: 0; /* deja que las tablas anchas hagan scroll en vez de empujar el layout */
+}
+
+.sidebar-brand {
+    padding: .5rem .5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    margin-bottom: .5rem;
+}
+
+.sidebar-nav {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    color: #cbd5e1;
+    border-radius: .5rem;
+    padding: .6rem .75rem;
+    margin-bottom: .15rem;
+    font-size: .925rem;
+}
+
+.sidebar .nav-link i {
+    width: 1.25rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link:focus-visible {
+    color: #fff;
+    background-color: var(--sispam-sidebar-hover);
+}
+
+.sidebar .nav-link.active {
+    color: #fff;
+    background-color: var(--sispam-sidebar-active);
+    font-weight: 600;
+}
+
+.sidebar-caret {
+    font-size: .7rem;
+    transition: transform .2s ease;
+}
+
+.sidebar-submenu-toggle.collapsed .sidebar-caret {
+    transform: rotate(-90deg);
+}
+
+.sidebar-submenu .nav-link {
+    padding-left: 2.1rem;
+    font-size: .875rem;
+}
+
+.sidebar-footer {
+    border-top: 1px solid rgba(255, 255, 255, .1);
+    padding-top: .75rem;
+    margin-top: auto;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .sispam-shell {
+        display: block;
+    }
+}
