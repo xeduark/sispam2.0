@@ -1,0 +1,15 @@
+# Configuración Apache para XAMPP y Hostinger VPS
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # Opcional para URLs limpias
+</IfModule>
+
+# Seguridad y tamaño máximo de archivos subidos
+php_value upload_max_filesize 25M
+php_value post_max_size 30M
+php_value max_execution_time 300
