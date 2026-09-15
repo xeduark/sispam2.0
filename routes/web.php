@@ -76,8 +76,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/expedientes', [ExpedientesController::class, 'index'])
         ->middleware('role:expedientes,ingreso')->name('expedientes.index');
 
-    Route::get('/empresa', [EmpresaController::class, 'edit'])
-        ->middleware('role:Administrador')->name('empresa.edit');
+    Route::middleware('role:Administrador')->group(function () {
+        Route::get('/empresa', [EmpresaController::class, 'edit'])->name('empresa.edit');
+        Route::post('/empresa/general', [EmpresaController::class, 'guardarGeneral'])->name('empresa.general');
+        Route::post('/empresa/empresas', [EmpresaController::class, 'crearEmpresa'])->name('empresa.empresas.store');
+        Route::put('/empresa/empresas/{empresa}', [EmpresaController::class, 'actualizarEmpresa'])->name('empresa.empresas.update');
+        Route::post('/empresa/sedes', [EmpresaController::class, 'crearSede'])->name('empresa.sedes.store');
+        Route::put('/empresa/sedes/{sede}', [EmpresaController::class, 'actualizarSede'])->name('empresa.sedes.update');
+    });
 
     Route::get('/pacientes/importar', [PacientesController::class, 'importar'])
         ->middleware('role:Administrador,empresa,usuarios')->name('pacientes.importar');
