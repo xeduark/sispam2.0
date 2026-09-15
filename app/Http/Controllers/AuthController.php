@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Sede;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,9 @@ class AuthController extends Controller
 {
     public function showLogin(): View
     {
-        return view('auth.login');
+        return view('auth.login', [
+            'sedes' => Sede::activas()->orderBy('nombre_sede')->get(),
+        ]);
     }
 
     public function login(Request $request): RedirectResponse
@@ -20,6 +23,7 @@ class AuthController extends Controller
         $credenciales = $request->validate([
             'usuario' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'sede_id' => ['nullable', 'exists:sedes,id'],
         ]);
 
         $ok = Auth::attempt([
@@ -35,6 +39,12 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+
+        // Sede activa opcional para esta sesión: activa el filtro multi-sede de Ingreso
+        // (App\Services\IngresoService::sedeActiva()), que hasta ahora nunca se llenaba.
+        if (! empty($credenciales['sede_id'])) {
+            $request->session()->put('active_sede_id', $credenciales['sede_id']);
+        }
 
         return redirect()->intended(route('dashboard'));
     }

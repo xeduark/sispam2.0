@@ -34,3 +34,9 @@ Thumbs.db
 
 # Backups locales (BD + uploads), fuera del repo
 /_backups/
+
+#Ejemplos de archivos de configuración
+/example
+
+# Exports de prueba de Qrystalos con datos reales de pacientes (PHI) - nunca versionar
+database/example/*.xls
