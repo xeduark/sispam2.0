@@ -85,6 +85,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios', [UsuariosController::class, 'index'])
         ->middleware('role:Administrador')->name('usuarios.index');
 
-    Route::get('/modulos', [ModulosController::class, 'index'])
-        ->middleware('role:Administrador')->name('modulos.index');
+    Route::middleware('role:Administrador')->group(function () {
+        Route::get('/modulos', [ModulosController::class, 'index'])->name('modulos.index');
+        Route::post('/modulos', [ModulosController::class, 'store'])->name('modulos.store');
+        Route::put('/modulos/{modulo}', [ModulosController::class, 'update'])->name('modulos.update');
+        Route::post('/modulos/{modulo}/toggle', [ModulosController::class, 'toggleEstado'])->name('modulos.toggle');
+    });
 });
