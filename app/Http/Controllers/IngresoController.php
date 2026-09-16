@@ -5,17 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\EmpresaConfig;
 use App\Models\Ingreso;
 use App\Models\Paciente;
+use App\Models\Sede;
 use App\Services\IngresoService;
+use App\Services\QrystalosService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class IngresoController extends Controller
 {
-    public function index(Request $request, IngresoService $ingresos): View
+    public function index(Request $request, IngresoService $ingresos, QrystalosService $qrystalos): View
     {
         $error = null;
+        $avisoQrystalos = null;
         $ticketGenerado = null;
         $ingresoIdCreado = null;
+        $sedesQrystalos = Sede::whereNotNull('qrystalos_id_sede')->orderBy('nombre_sede')->get();
 
         if ($request->isMethod('post')) {
             $datos = $request->validate([
@@ -24,6 +28,14 @@ class IngresoController extends Controller
                 'primer_apellido' => ['required', 'string'],
                 'primer_nombre' => ['required', 'string'],
                 'eps_nombre' => ['required', 'string'],
+                'qrystalos_idadministradora' => ['required', 'string'],
+                'qrystalos_idplan' => ['required', 'string'],
+                'qrystalos_idciudad' => ['required', 'string'],
+                'qrystalos_idbarrio' => ['required', 'string'],
+                'qrystalos_idsede' => ['required', 'string'],
+                'contacto_emergencia_nombre' => ['required', 'string'],
+                'contacto_emergencia_telefono' => ['required', 'string'],
+                'contacto_emergencia_parentesco' => ['required', 'string'],
                 'persona_reclama' => ['nullable', 'string'],
                 'doc_tipo_categoria' => ['array'],
                 'doc_archivos' => ['array'],
@@ -66,10 +78,16 @@ class IngresoController extends Controller
 
                 $ticketGenerado = $resultado['ticket'];
                 $ingresoIdCreado = $resultado['id'];
+
+                // El ingreso en SISPAM ya quedó guardado; un KO de Qrystalos solo se avisa, no revierte nada.
+                $envio = $qrystalos->insertarPaciente($paciente);
+                if (! $envio['ok']) {
+                    $avisoQrystalos = 'Qrystalos rechazó el envío del paciente: '.implode(' | ', $envio['errores']);
+                }
             }
         }
 
-        return view('ingreso.index', compact('error', 'ticketGenerado', 'ingresoIdCreado'));
+        return view('ingreso.index', compact('error', 'avisoQrystalos', 'ticketGenerado', 'ingresoIdCreado', 'sedesQrystalos'));
     }
 
     /**

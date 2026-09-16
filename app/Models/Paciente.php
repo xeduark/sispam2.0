@@ -105,6 +105,11 @@ class Paciente extends Model
             'ips_primaria' => $data['ips_primaria'] ?? '900294794 - COMITE DE ESTUDIOS MEDICOS SAS',
             'ips_remite' => $data['ips_remite'] ?? null,
             'empleador' => $data['empleador'] ?? null,
+            'qrystalos_idadministradora' => $data['qrystalos_idadministradora'] ?? null,
+            'qrystalos_idplan' => $data['qrystalos_idplan'] ?? null,
+            'qrystalos_idciudad' => $data['qrystalos_idciudad'] ?? null,
+            'qrystalos_idbarrio' => $data['qrystalos_idbarrio'] ?? null,
+            'qrystalos_idsede' => $data['qrystalos_idsede'] ?? null,
         ];
 
         return static::updateOrCreate(

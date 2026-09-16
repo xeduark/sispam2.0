@@ -4,6 +4,7 @@ use App\Http\Controllers\AlistamientoController;
 use App\Http\Controllers\Api\LockApiController;
 use App\Http\Controllers\Api\NotificacionApiController;
 use App\Http\Controllers\Api\PacienteApiController;
+use App\Http\Controllers\Api\QrystalosApiController;
 use App\Http\Controllers\Api\TurneroApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -50,6 +51,12 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::delete('/ingresos/{ingreso}/lock', [LockApiController::class, 'liberar'])->name('ingresos.unlock');
         Route::get('/notificaciones', [NotificacionApiController::class, 'index'])->name('notificaciones.index');
         Route::post('/notificaciones/{notificacion}/leida', [NotificacionApiController::class, 'marcarLeido'])->name('notificaciones.leida');
+
+        // Catálogos Qrystalos para los selectores dependientes del formulario de Ingreso.
+        Route::get('/qrystalos/aseguradoras', [QrystalosApiController::class, 'aseguradoras'])->name('qrystalos.aseguradoras');
+        Route::get('/qrystalos/planes', [QrystalosApiController::class, 'planes'])->name('qrystalos.planes');
+        Route::get('/qrystalos/ciudades', [QrystalosApiController::class, 'ciudades'])->name('qrystalos.ciudades');
+        Route::get('/qrystalos/barrios', [QrystalosApiController::class, 'barrios'])->name('qrystalos.barrios');
     });
 });
 

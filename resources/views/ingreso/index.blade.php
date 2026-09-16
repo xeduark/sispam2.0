@@ -45,6 +45,12 @@
                 </span>
             </div>
 
+            @if ($avisoQrystalos)
+                <div class="alert alert-warning text-start small fw-semibold mx-auto" style="max-width: 700px;">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> El ingreso quedó guardado en SISPAM, pero {{ $avisoQrystalos }}
+                </div>
+            @endif
+
             <div class="d-flex justify-content-center gap-3 mt-3">
                 <a href="{{ route('ingreso.ticket', $ingresoIdCreado) }}" target="_blank" class="btn btn-success btn-lg fw-bold shadow">
                     <i class="fa-solid fa-print me-2"></i> Imprimir Tiquete Térmico
@@ -188,8 +194,8 @@
                             <div class="col-md-3">
                                 <label class="form-label fw-semibold">Estado Civil <span class="text-danger">*</span></label>
                                 <select name="estado_civil" id="estado_civil" class="form-select" required>
-                                    @foreach (config('sispam.estados_civiles') as $ec)
-                                        <option value="{{ $ec }}">{{ $ec }}</option>
+                                    @foreach (config('qrystalos.estado_civil') as $codigo => $ec)
+                                        <option value="{{ $codigo }}">{{ $ec }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -267,7 +273,10 @@
 
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Ciudad de Residencia <span class="text-danger">*</span></label>
-                                <input type="text" name="ciudad_residencia" id="ciudad_residencia" class="form-control" value="MEDELLIN-ANT-05001" required>
+                                <input type="text" name="ciudad_residencia" id="ciudad_residencia" class="form-control" list="lista_ciudades" value="MEDELLIN" autocomplete="off" required>
+                                <datalist id="lista_ciudades"></datalist>
+                                <input type="hidden" name="qrystalos_idciudad" id="qrystalos_idciudad" value="05001">
+                                <div class="form-text small">Escriba para buscar. Necesario para el barrio.</div>
                             </div>
 
                             <div class="col-md-3">
@@ -280,11 +289,10 @@
 
                             <div class="col-md-5">
                                 <label class="form-label fw-semibold">Barrio de Residencia <span class="text-danger">*</span></label>
-                                <select name="barrio" id="barrio" class="form-select" required>
-                                    @foreach (config('sispam.barrios_medellin') as $b)
-                                        <option value="{{ $b }}">{{ $b }}</option>
-                                    @endforeach
+                                <select name="qrystalos_idbarrio" id="barrio" class="form-select" required>
+                                    <option value="">-- Seleccione primero la ciudad --</option>
                                 </select>
+                                <input type="hidden" name="barrio" id="barrio_nombre">
                             </div>
 
                             <div class="col-md-8">
@@ -306,18 +314,19 @@
                         <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-file-medical me-2"></i> 4. Afiliación al Sistema de Salud & EPS (RIPS)</h5>
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">Aseguradora (EPS) <span class="text-danger">*</span></label>
-                                <select name="eps_nombre" id="eps_nombre" class="form-select" required>
-                                    <option value="">-- Seleccionar EPS --</option>
-                                    @foreach (config('sispam.eps_colombia') as $eps)
-                                        <option value="{{ $eps }}">{{ $eps }}</option>
-                                    @endforeach
-                                </select>
+                                <label class="form-label fw-semibold">Aseguradora <span class="text-danger">*</span></label>
+                                <input type="text" id="buscar_aseguradora" class="form-control" list="lista_aseguradoras" placeholder="Escriba para buscar (ej: Sura, Nueva EPS)..." autocomplete="off" required>
+                                <datalist id="lista_aseguradoras"></datalist>
+                                <input type="hidden" name="eps_nombre" id="eps_nombre">
+                                <input type="hidden" name="qrystalos_idadministradora" id="qrystalos_idadministradora">
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">Plan de Salud</label>
-                                <input type="text" name="plan_salud" id="plan_salud" class="form-control" value="Plan Básico" placeholder="Ej: Plan Básico, Plan Complementario, POS">
+                                <label class="form-label fw-semibold">Plan de Salud <span class="text-danger">*</span></label>
+                                <select id="qrystalos_idplan" name="qrystalos_idplan" class="form-select" required disabled>
+                                    <option value="">-- Seleccione primero la aseguradora --</option>
+                                </select>
+                                <input type="hidden" name="plan_salud" id="plan_salud">
                             </div>
 
                             <div class="col-md-4 d-flex align-items-end">
@@ -382,11 +391,13 @@
 
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Sede de Atención <span class="text-danger">*</span></label>
-                                <select name="sede_atencion" id="sede_atencion" class="form-select" required>
-                                    @foreach (config('sispam.sedes_atencion') as $sa)
-                                        <option value="{{ $sa }}">{{ $sa }}</option>
+                                <select name="qrystalos_idsede" id="sede_atencion" class="form-select" required onchange="document.getElementById('sede_atencion_nombre').value = this.options[this.selectedIndex].text">
+                                    <option value="">-- Seleccionar Sede --</option>
+                                    @foreach ($sedesQrystalos as $sede)
+                                        <option value="{{ $sede->qrystalos_id_sede }}">{{ $sede->nombre_sede }}</option>
                                     @endforeach
                                 </select>
+                                <input type="hidden" name="sede_atencion" id="sede_atencion_nombre">
                             </div>
 
                             <div class="col-md-6">
@@ -439,8 +450,8 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Grupo Poblacional <span class="text-danger">*</span></label>
                                 <select name="grupo_poblacional" id="grupo_poblacional" class="form-select" required>
-                                    @foreach (config('sispam.grupos_poblacionales') as $gp)
-                                        <option value="{{ $gp }}">{{ $gp }}</option>
+                                    @foreach (config('qrystalos.grupo_poblacional') as $codigo => $gp)
+                                        <option value="{{ $codigo }}" {{ $codigo === '5' ? 'selected' : '' }}>{{ $gp }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -448,8 +459,8 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Grupo Étnico <span class="text-danger">*</span></label>
                                 <select name="grupo_etnico" id="grupo_etnico" class="form-select" required>
-                                    @foreach (config('sispam.grupos_etnicos') as $ge)
-                                        <option value="{{ $ge }}">{{ $ge }}</option>
+                                    @foreach (config('qrystalos.grupo_etnico') as $codigo => $ge)
+                                        <option value="{{ $codigo }}" {{ $codigo === 'N' ? 'selected' : '' }}>{{ $ge }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -462,8 +473,8 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Tipo de Discapacidad <span class="text-danger">*</span></label>
                                 <select name="tipo_discapacidad" id="tipo_discapacidad" class="form-select" required>
-                                    @foreach (config('sispam.tipos_discapacidad') as $td)
-                                        <option value="{{ $td }}">{{ $td }}</option>
+                                    @foreach (config('qrystalos.tipo_discapacidad') as $codigo => $td)
+                                        <option value="{{ $codigo }}" {{ $codigo === 'N' ? 'selected' : '' }}>{{ $td }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -471,26 +482,26 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Tipo de Escolaridad <span class="text-danger">*</span></label>
                                 <select name="tipo_escolaridad" id="tipo_escolaridad" class="form-select" required>
-                                    @foreach (config('sispam.tipos_escolaridad') as $te)
-                                        <option value="{{ $te }}">{{ $te }}</option>
+                                    @foreach (config('qrystalos.escolaridad') as $codigo => $te)
+                                        <option value="{{ $codigo }}" {{ $codigo === '13' ? 'selected' : '' }}>{{ $te }}</option>
                                     @endforeach
                                 </select>
                             </div>
 
-                            <!-- Contacto de Emergencia -->
+                            <!-- Contacto de Emergencia: obligatorio para Qrystalos, aunque el doc público no lo documente -->
                             <div class="col-md-5">
-                                <label class="form-label fw-semibold">Nombre Contacto de Emergencia</label>
-                                <input type="text" name="contacto_emergencia_nombre" id="contacto_emergencia_nombre" class="form-control" placeholder="Ej: María Rodríguez">
+                                <label class="form-label fw-semibold">Nombre Contacto de Emergencia <span class="text-danger">*</span></label>
+                                <input type="text" name="contacto_emergencia_nombre" id="contacto_emergencia_nombre" class="form-control" placeholder="Ej: María Rodríguez" required>
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold">Teléfono Contacto Emergencia</label>
-                                <input type="text" name="contacto_emergencia_telefono" id="contacto_emergencia_telefono" class="form-control" placeholder="Ej: 3001234567">
+                                <label class="form-label fw-semibold">Teléfono Contacto Emergencia <span class="text-danger">*</span></label>
+                                <input type="text" name="contacto_emergencia_telefono" id="contacto_emergencia_telefono" class="form-control" placeholder="Ej: 3001234567" required>
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold">Parentesco</label>
-                                <input type="text" name="contacto_emergencia_parentesco" id="contacto_emergencia_parentesco" class="form-control" placeholder="Ej: Madre / Cónyuge">
+                                <label class="form-label fw-semibold">Parentesco <span class="text-danger">*</span></label>
+                                <input type="text" name="contacto_emergencia_parentesco" id="contacto_emergencia_parentesco" class="form-control" placeholder="Ej: Madre / Cónyuge" required>
                             </div>
                         </div>
                     </div>
@@ -677,7 +688,144 @@ let scannerPro = null;
 let currentStep = 1;
 const totalSteps = 6;
 
+// --- Catálogos Qrystalos: Ciudad→Barrio, Aseguradora→Plan (ver app/Http/Controllers/Api/QrystalosApiController.php) ---
+const URL_CIUDADES = @json(route('api.qrystalos.ciudades'));
+const URL_BARRIOS = @json(route('api.qrystalos.barrios'));
+const URL_ASEGURADORAS = @json(route('api.qrystalos.aseguradoras'));
+const URL_PLANES = @json(route('api.qrystalos.planes'));
+
+function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function inicializarCiudadBarrio() {
+    const inputCiudad = document.getElementById('ciudad_residencia');
+    const hiddenIdCiudad = document.getElementById('qrystalos_idciudad');
+    const selectBarrio = document.getElementById('barrio');
+    const hiddenBarrioNombre = document.getElementById('barrio_nombre');
+    const datalist = document.getElementById('lista_ciudades');
+    let ciudadesCache = {};
+
+    const buscarCiudades = debounce(() => {
+        const q = inputCiudad.value.trim();
+        if (q.length < 2) return;
+        fetch(`${URL_CIUDADES}?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                datalist.innerHTML = '';
+                ciudadesCache = {};
+                data.forEach(c => {
+                    ciudadesCache[c.nombre_ciudad] = c.idciudad;
+                    const opt = document.createElement('option');
+                    opt.value = c.nombre_ciudad;
+                    datalist.appendChild(opt);
+                });
+            });
+    }, 300);
+
+    function cargarBarrios(idciudad) {
+        selectBarrio.innerHTML = '<option value="">Cargando...</option>';
+        fetch(`${URL_BARRIOS}?idciudad=${encodeURIComponent(idciudad)}`)
+            .then(r => r.json())
+            .then(data => {
+                selectBarrio.innerHTML = '<option value="">-- Seleccione el barrio --</option>';
+                data.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.idbarrio;
+                    opt.dataset.nombre = b.nombre_barrio;
+                    opt.textContent = b.nombre_barrio;
+                    selectBarrio.appendChild(opt);
+                });
+            });
+    }
+
+    inputCiudad.addEventListener('input', () => {
+        buscarCiudades();
+        const idciudad = ciudadesCache[inputCiudad.value];
+        if (idciudad) {
+            hiddenIdCiudad.value = idciudad;
+            cargarBarrios(idciudad);
+        }
+    });
+
+    selectBarrio.addEventListener('change', () => {
+        const opt = selectBarrio.options[selectBarrio.selectedIndex];
+        hiddenBarrioNombre.value = opt ? (opt.dataset.nombre || '') : '';
+    });
+
+    // Ciudad por defecto (Medellín) ya viene precargada en el input; buscamos su código al cargar.
+    fetch(`${URL_CIUDADES}?q=${encodeURIComponent(inputCiudad.value)}`)
+        .then(r => r.json())
+        .then(data => {
+            const match = data.find(c => c.nombre_ciudad === inputCiudad.value.toUpperCase()) || data[0];
+            if (match) {
+                hiddenIdCiudad.value = match.idciudad;
+                cargarBarrios(match.idciudad);
+            }
+        });
+}
+
+function inicializarAseguradoraPlan() {
+    const inputAseguradora = document.getElementById('buscar_aseguradora');
+    const hiddenEpsNombre = document.getElementById('eps_nombre');
+    const hiddenIdAdministradora = document.getElementById('qrystalos_idadministradora');
+    const selectPlan = document.getElementById('qrystalos_idplan');
+    const hiddenPlanSalud = document.getElementById('plan_salud');
+    const datalist = document.getElementById('lista_aseguradoras');
+    let aseguradorasCache = {};
+
+    const buscarAseguradoras = debounce(() => {
+        const q = inputAseguradora.value.trim();
+        if (q.length < 2) return;
+        fetch(`${URL_ASEGURADORAS}?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                datalist.innerHTML = '';
+                aseguradorasCache = {};
+                data.forEach(a => {
+                    aseguradorasCache[a.razonsocial] = a.idtercero;
+                    const opt = document.createElement('option');
+                    opt.value = a.razonsocial;
+                    datalist.appendChild(opt);
+                });
+            });
+    }, 300);
+
+    inputAseguradora.addEventListener('input', () => {
+        buscarAseguradoras();
+        const idtercero = aseguradorasCache[inputAseguradora.value];
+        if (idtercero) {
+            hiddenEpsNombre.value = inputAseguradora.value;
+            hiddenIdAdministradora.value = idtercero;
+            selectPlan.disabled = true;
+            selectPlan.innerHTML = '<option value="">Cargando planes...</option>';
+            fetch(`${URL_PLANES}?idtercero=${encodeURIComponent(idtercero)}`)
+                .then(r => r.json())
+                .then(planes => {
+                    selectPlan.innerHTML = '<option value="">-- Seleccione el plan --</option>';
+                    planes.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p.idplan;
+                        opt.dataset.desc = p.descplan;
+                        opt.textContent = p.descplan;
+                        selectPlan.appendChild(opt);
+                    });
+                    selectPlan.disabled = false;
+                });
+        }
+    });
+
+    selectPlan.addEventListener('change', () => {
+        const opt = selectPlan.options[selectPlan.selectedIndex];
+        hiddenPlanSalud.value = opt ? (opt.dataset.desc || '') : '';
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    inicializarCiudadBarrio();
+    inicializarAseguradoraPlan();
+
     const btnBuscar = document.getElementById('btnBuscarPaciente');
     const inputDoc = document.getElementById('numero_documento');
     const selectTipoDoc = document.getElementById('tipo_documento');
@@ -850,11 +998,16 @@ function cerrarNotificacionModal() {
 }
 
 function autocompletarFormulario(data) {
+    // Nota: estado_civil, zona, barrio y sede ahora son <select> con código Qrystalos
+    // (antes texto libre). Si el paciente es de antes de esta migración, esos campos
+    // no van a matchear ningún <option> y quedan en su valor por defecto -no rompe
+    // nada, solo obliga a re-seleccionar aseguradora/plan/ciudad/barrio/sede en cada
+    // ingreso, que de todas formas es lo más seguro (pueden cambiar con el tiempo).
     const mapFields = [
         'primer_apellido', 'segundo_apellido', 'primer_nombre', 'segundo_nombre',
         'fecha_nacimiento', 'ciudad_expedicion', 'estado', 'sexo', 'estado_civil',
-        'direccion_residencia', 'numero_celular', 'email', 'ciudad_residencia', 'zona', 'barrio',
-        'eps_nombre', 'plan_salud', 'tipo_afiliado', 'nivel_socioeconomico', 'sede_atencion'
+        'direccion_residencia', 'numero_celular', 'email', 'zona',
+        'tipo_afiliado', 'nivel_socioeconomico'
     ];
     mapFields.forEach(field => {
         const el = document.getElementById(field);

@@ -70,19 +70,12 @@ class QrystalosApiController extends Controller
 
         $barrios = QrystalosBarrio::where('idciudad', $idciudad)
             ->whereNotNull('idbarrio')
+            ->whereNotNull('nombre_barrio')
+            ->where('nombre_barrio', '!=', '')
             ->select('idbarrio', 'nombre_barrio')
             ->orderBy('nombre_barrio')
             ->get();
 
         return response()->json($barrios);
-    }
-
-    public function sedes(): JsonResponse
-    {
-        $sedes = Sede::whereNotNull('qrystalos_id_sede')
-            ->orderBy('nombre_sede')
-            ->get(['qrystalos_id_sede', 'nombre_sede']);
-
-        return response()->json($sedes);
     }
 }
