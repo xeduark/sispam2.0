@@ -1,0 +1,63 @@
+/* Topbar superior del panel administrativo. Usa variables de theme.css. */
+
+.sispam-topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: .85rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    color: var(--text);
+}
+
+.sispam-topbar h6 {
+    color: var(--text);
+}
+
+.btn-sidebar-toggle,
+.btn-theme-toggle {
+    border: 1px solid var(--border);
+    background: var(--card-soft);
+    color: var(--text);
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color .2s ease, border-color .2s ease;
+}
+
+.btn-sidebar-toggle:hover,
+.btn-theme-toggle:hover {
+    background: var(--border);
+}
+
+.user-badge-topbar {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    background: var(--card-soft);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .3rem .75rem .3rem .3rem;
+    color: var(--text);
+}
+
+.user-avatar-circle {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: .8rem;
+    flex-shrink: 0;
+}

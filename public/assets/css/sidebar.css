@@ -1,0 +1,51 @@
+/* Shell general de la app. El aspecto del sidebar se define con utilidades de
+   Tailwind en layouts/app.blade.php y componentes/sidebar.blade.php; aquí queda
+   solo el layout que lo envuelve y el estado "minimizado" (solo iconos), que
+   necesita reglas propias porque depende de una clase que alterna el botón. */
+
+.sispam-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sispam-content {
+    flex: 1 1 auto;
+    min-width: 0; /* deja que las tablas anchas hagan scroll en vez de empujar el layout */
+}
+
+/* El menú se desplaza sin mostrar barra: en un sidebar angosto se come el
+   ancho útil y parte los textos en dos líneas. */
+.sidebar-nav {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* ===== Sidebar minimizado (solo iconos) ===== */
+#sispam-sidebar.is-mini {
+    width: 4.5rem;
+}
+
+#sispam-sidebar.is-mini .sidebar-label,
+#sispam-sidebar.is-mini .sidebar-section,
+#sispam-sidebar.is-mini .sidebar-caret {
+    display: none;
+}
+
+#sispam-sidebar.is-mini .sidebar-item {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 0;
+}
+
+#sispam-sidebar.is-mini .sidebar-subitem {
+    padding-left: 0;
+}
+
+#sispam-sidebar.is-mini .sidebar-footer {
+    justify-content: center;
+}
