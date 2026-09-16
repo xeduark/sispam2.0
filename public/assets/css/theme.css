@@ -1,0 +1,94 @@
+/*
+ * Variables de tema institucional (Comité de Estudios Médicos) - claro/oscuro.
+ * Cualquier componente nuevo debe consumir estas variables (var(--texto), etc.)
+ * en vez de colores fijos, así el toggle de tema los cubre automáticamente.
+ * El toggle (public/assets/js/theme.js) alterna [data-theme] en <html>.
+ */
+:root {
+    --bg: #f3f5f7;
+    --card: #ffffff;
+    --card-soft: #f8fafb;
+    --border: #dfe4e8;
+    --text: #1f2933;
+    --muted: #66727d;
+    --primary: #1f4e79;
+    --primary-hover: #173b5c;
+    --shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    --success: #198754;
+    --warning: #b7791f;
+    --danger: #c53030;
+
+    /* El sidebar es azul institucional en modo claro y negro en modo oscuro. */
+    --sidebar-bg: #1f4e79;
+    --sidebar-hover: rgba(255, 255, 255, .08);
+    --sidebar-active: #0284c7;
+}
+
+html[data-theme="dark"] {
+    --bg: #101417;
+    --card: #171d21;
+    --card-soft: #1d252a;
+    --border: #303a40;
+    --text: #edf2f4;
+    --muted: #aab5bc;
+    --primary: #4d8ac4;
+    --primary-hover: #619bd0;
+    --shadow: 0 8px 25px rgba(0, 0, 0, 0.28);
+    --success: #48bb78;
+    --warning: #ecc94b;
+    --danger: #fc8181;
+
+    --sidebar-bg: #05070a;
+    --sidebar-hover: rgba(255, 255, 255, .06);
+    --sidebar-active: #1c6fb0;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    transition: background-color .25s ease, color .25s ease;
+}
+
+a {
+    color: var(--primary);
+}
+
+a:hover {
+    color: var(--primary-hover);
+}
+
+.text-muted {
+    color: var(--muted) !important;
+}
+
+.card,
+.table,
+.footer,
+.modal-content {
+    background-color: var(--card);
+    color: var(--text);
+    border-color: var(--border) !important;
+}
+
+.table > :not(caption) > * > * {
+    background-color: var(--card);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.form-control,
+.form-select {
+    background-color: var(--card);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--card);
+    color: var(--text);
+}
+
+.form-label {
+    color: var(--text);
+}

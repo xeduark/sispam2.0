@@ -36,11 +36,11 @@
         @if ($ticketGenerado)
         <div class="card card-glass border-success border-2 mb-4 text-center p-4 shadow-lg">
             <div class="text-success display-4 mb-2"><i class="fa-solid fa-circle-check"></i></div>
-            <h3 class="fw-bold text-dark mb-1">¡Registro de Ingreso Exitoso!</h3>
+            <h3 class="fw-bold mb-1 dark:text-slate-100">¡Registro de Ingreso Exitoso!</h3>
             <p class="text-muted">Se ha generado el tiquete para el paciente en el sistema.</p>
-            
+
             <div class="my-3">
-                <span class="fs-1 fw-bold text-primary px-4 py-2 bg-light border border-primary rounded shadow-sm">
+                <span class="fs-1 fw-bold text-primary px-4 py-2 bg-slate-100 border border-primary rounded shadow-sm dark:bg-slate-800">
                     {{ $ticketGenerado }}
                 </span>
             </div>
@@ -76,7 +76,7 @@
             @endif
 
             <!-- WIZARD PROGRESS BAR (UX IMPROVEMENT) -->
-            <div class="mb-4 bg-light p-3 rounded border shadow-sm">
+            <div class="mb-4 bg-slate-100 p-3 rounded border shadow-sm dark:bg-slate-800 dark:border-slate-700">
                 <div class="progress" style="height: 10px;">
                     <div id="wizard-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 16.66%;"></div>
                 </div>
@@ -114,6 +114,14 @@
                                     <label class="form-label fw-semibold">Observaciones / Novedad de Prioridad</label>
                                     <input type="text" name="prioridad_observacion" id="prioridad_observacion" class="form-control" placeholder="Ej: Adulto mayor en silla de ruedas, embarazada en 3er trimestre...">
                                 </div>
+                                <div class="col-12">
+                                    <div class="form-check form-switch bg-white border border-danger border-opacity-25 rounded-3 p-3 ps-5">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="medicamento_alto_costo" id="medicamento_alto_costo" value="1">
+                                        <label class="form-check-label fw-bold text-danger" for="medicamento_alto_costo">
+                                            <i class="fa-solid fa-capsules me-1"></i> Medicamento de Alto Costo (Imprimir en Tiquete)
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -121,7 +129,7 @@
 
                 <!-- PASO 2: DATOS DE IDENTIFICACIÓN -->
                 <div class="wizard-step d-none" id="step-2">
-                    <div class="card border-0 bg-light p-3 mb-4 shadow-sm">
+                    <div class="card border-0 bg-slate-50 p-3 mb-4 shadow-sm dark:bg-slate-800 dark:border dark:border-slate-700">
                         <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-id-card me-2"></i> 2. Datos Principales de Identificación</h5>
                         <div class="row g-3">
                             <div class="col-md-3">
@@ -146,7 +154,7 @@
 
                             <div class="col-md-3">
                                 <label class="form-label fw-semibold">Fecha y Hora Ingreso</label>
-                                <input type="text" class="form-control bg-white" value="{{ date('d/m/Y h:i A') }}" readonly>
+                                <input type="text" class="form-control dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600" value="{{ date('d/m/Y h:i A') }}" readonly>
                             </div>
 
                             <div class="col-md-2">
@@ -230,7 +238,7 @@
 
                 <!-- PASO 3: UBICACIÓN Y RESIDENCIA -->
                 <div class="wizard-step d-none" id="step-3">
-                    <div class="card border-0 bg-light p-3 mb-4 shadow-sm">
+                    <div class="card border-0 bg-slate-50 p-3 mb-4 shadow-sm dark:bg-slate-800 dark:border dark:border-slate-700">
                         <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-location-dot me-2"></i> 3. Ubicación, Residencia & Datos de Contacto</h5>
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -310,7 +318,7 @@
 
                 <!-- PASO 4: AFILIACIÓN AL SGSSS & SALUD -->
                 <div class="wizard-step d-none" id="step-4">
-                    <div class="card border-0 bg-light p-3 mb-4 shadow-sm">
+                    <div class="card border-0 bg-slate-50 p-3 mb-4 shadow-sm dark:bg-slate-800 dark:border dark:border-slate-700">
                         <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-file-medical me-2"></i> 4. Afiliación al Sistema de Salud & EPS (RIPS)</h5>
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -444,7 +452,7 @@
 
                 <!-- PASO 5: CARACTERIZACIÓN POBLACIONAL, ÉTNICA & EMERGENCIA -->
                 <div class="wizard-step d-none" id="step-5">
-                    <div class="card border-0 bg-light p-3 mb-4 shadow-sm">
+                    <div class="card border-0 bg-slate-50 p-3 mb-4 shadow-sm dark:bg-slate-800 dark:border dark:border-slate-700">
                         <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-people-roof me-2"></i> 5. Caracterización Poblacional, Étnica & Contacto de Emergencia</h5>
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -509,11 +517,11 @@
 
                 <!-- PASO 6: RECLAMACIÓN Y DOCUMENTOS ADJUNTOS -->
                 <div class="wizard-step d-none" id="step-6">
-                    <div class="card border-0 bg-light p-3 mb-4 shadow-sm">
+                    <div class="card border-0 bg-slate-50 p-3 mb-4 shadow-sm dark:bg-slate-800 dark:border dark:border-slate-700">
                         <h5 class="fw-bold text-primary mb-3"><i class="fa-solid fa-user-check me-2"></i> 6. Persona que Reclama los Medicamentos</h5>
                         <div class="row align-items-center g-3">
                             <div class="col-md-7">
-                                <label class="form-label fw-bold text-dark fs-6">
+                                <label class="form-label fw-bold fs-6 dark:text-slate-100">
                                     ¿Los medicamentos son reclamados por el mismo paciente o por un tercero/acudiente? <span class="text-danger">*</span>
                                 </label>
                                 <select name="persona_reclama" id="select_persona_reclama" class="form-select form-select-lg fw-bold border-primary shadow-sm" required onchange="evaluarVisualizacionSoportes()">
@@ -531,7 +539,7 @@
                     </div>
 
                     <!-- DOCUMENTOS ADJUNTOS POR SEPARADO -->
-                    <div id="seccion_soportes_container" class="card border-0 bg-light p-3 mb-4 shadow-sm d-none">
+                    <div id="seccion_soportes_container" class="card border-0 bg-slate-50 p-3 mb-4 shadow-sm d-none dark:bg-slate-800 dark:border dark:border-slate-700">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
                                 <h5 class="fw-bold text-primary mb-0"><i class="fa-solid fa-file-arrow-up me-2"></i> 7. Documentos Adjuntos del Ingreso (Por Separado)</h5>
@@ -584,7 +592,7 @@
             </div>
             <div class="modal-body p-4 text-center">
                 <div id="modalNotifIcon" class="display-3 mb-3"></div>
-                <div id="modalNotifMessage" class="fs-5 text-dark fw-semibold"></div>
+                <div id="modalNotifMessage" class="fs-5 fw-semibold dark:text-slate-100"></div>
             </div>
             <div class="modal-footer justify-content-center border-0 pt-0">
                 <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="cerrarNotificacionModal()" data-bs-dismiss="modal">
@@ -960,7 +968,7 @@ function generarFilasSoportes(tiposRequeridos) {
 
     tiposRequeridos.forEach((tipoTag, index) => {
         const divRow = document.createElement('div');
-        divRow.className = 'card border-primary border-1 mb-2 item-documento bg-white p-2 shadow-sm';
+        divRow.className = 'card border-primary border-1 mb-2 item-documento bg-white dark:bg-slate-800 dark:text-slate-100 p-2 shadow-sm';
         divRow.innerHTML = `
             <div class="row align-items-center g-2">
                 <div class="col-md-4">
@@ -1018,7 +1026,7 @@ function autocompletarFormulario(data) {
 function agregarFilaDoc() {
     const container = document.getElementById('contenedor-documentos');
     const div = document.createElement('div');
-    div.className = 'card border-secondary border-1 mb-2 item-documento bg-white p-2 shadow-sm';
+    div.className = 'card border-secondary border-1 mb-2 item-documento bg-white dark:bg-slate-800 dark:text-slate-100 p-2 shadow-sm';
     div.innerHTML = `
         <div class="row align-items-center g-2">
             <div class="col-md-4">

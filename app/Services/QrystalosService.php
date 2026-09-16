@@ -115,8 +115,12 @@ class QrystalosService
             'ESTADO' => 'Activo',
             'FECHAAFILIACION' => optional($p->fecha_afiliacion)->format('Y-m-d'),
             'PROCEDENCIA' => 'SISPAM',
-            // TODO Qrystalos: nombre exacto de parámetro sin confirmar (probados >15 variantes sin éxito).
-            // Mientras tanto Qrystalos devuelve KO por estos 3 campos; no bloquea el guardado en SISPAM.
+            // TODO Qrystalos: estos 3 campos NO existen en su documentación (§5.1 no los
+            // lista y §8 no lista sus mensajes de error), pero su backend los exige. Se
+            // probaron ~40 variantes de nombre sin que reconociera ninguna. Comprobado
+            // además que el ejemplo oficial del propio doc, enviado literal, también es
+            // rechazado por estos 3 campos: la validación es de ellos y está sin documentar.
+            // Hasta que confirmen el nombre real, el KO no bloquea el guardado en SISPAM.
             'NOMBRE_CONTACTO_EMERGENCIA' => $p->contacto_emergencia_nombre,
             'TELEFONO_CONTACTO_EMERGENCIA' => $p->contacto_emergencia_telefono,
             'PARENTESCO_CONTACTO_EMERGENCIA' => $p->contacto_emergencia_parentesco,

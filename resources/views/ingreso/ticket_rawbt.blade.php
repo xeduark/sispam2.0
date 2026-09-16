@@ -24,6 +24,12 @@ Tel: {{ $config->telefono }}<br>
 {{ strip_tags(get_prioridad_badge($ingreso->prioridad)) }}<br>
 </center>
 @endif
+@if ($ingreso->contiene_mipres === 'SI')
+<center>
+--------------------------------<br>
+<b>*** MEDICAMENTO DE ALTO COSTO ***</b><br>
+</center>
+@endif
 --------------------------------<br>
 <center>
 {{ $config->pie_tiquete }}<br>

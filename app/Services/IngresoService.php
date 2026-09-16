@@ -43,13 +43,14 @@ class IngresoService
         string $prioridad = 'NORMAL',
         ?string $prioridadObs = null,
         string $personaReclama = 'PACIENTE_DIRECTO',
-        ?string $ipsRemite = null
+        ?string $ipsRemite = null,
+        bool $medicamentoAltoCosto = false
     ): array {
         $ticket = $this->generarTicketConsecutivo();
         $folderName = $paciente->numero_documento.'_'.now()->format('dmy');
         $relDir = "assets/uploads/pacientes/{$paciente->tipo_documento}_{$paciente->numero_documento}/{$folderName}/";
 
-        return DB::transaction(function () use ($paciente, $orientadorId, $archivos, $prioridad, $prioridadObs, $personaReclama, $ipsRemite, $ticket, $relDir) {
+        return DB::transaction(function () use ($paciente, $orientadorId, $archivos, $prioridad, $prioridadObs, $personaReclama, $ipsRemite, $medicamentoAltoCosto, $ticket, $relDir) {
             $ingreso = Ingreso::create([
                 'ticket_numero' => $ticket,
                 'paciente_id' => $paciente->id,
@@ -60,6 +61,7 @@ class IngresoService
                 'prioridad_observacion' => $prioridadObs ?: null,
                 'persona_reclama' => $personaReclama ?: 'PACIENTE_DIRECTO',
                 'ips_remite' => $ipsRemite ?: null,
+                'contiene_mipres' => $medicamentoAltoCosto ? 'SI' : 'NO',
             ]);
 
             foreach ($archivos as $tipoDocumento => $archivo) {

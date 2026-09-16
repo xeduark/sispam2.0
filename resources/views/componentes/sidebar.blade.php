@@ -3,144 +3,155 @@
     $esAdmin = $u->esAdministrador();
     $verConfig = $u->hasPermission('empresa') || $u->hasPermission('usuarios') || $u->hasPermission('modulos') || $esAdmin;
     $configAbierto = request()->routeIs('empresa.*', 'usuarios.*', 'modulos.*', 'pacientes.*');
+    $verOperacion = $u->hasPermission('ingreso') || $u->hasPermission('transcripcion') || $u->hasPermission('alistamiento') || $u->hasPermission('entrega');
+    $operacionAbierta = request()->routeIs('ingreso.*', 'transcripcion.*', 'alistamiento.*', 'entrega.*');
+    $turnerosAbiertos = request()->routeIs('turnero.*');
+
+    // Clases compartidas: un solo lugar para el color de link normal / activo,
+    // así cualquier item nuevo hereda el mismo contraste sin repetirlo.
+    // .sidebar-label marca el texto que se oculta al minimizar (ver sidebar.css).
+    $linkBase = 'sidebar-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-200 whitespace-nowrap no-underline transition-colors hover:bg-white/10 hover:text-white';
+    $linkActive = 'bg-sky-600 text-white font-semibold hover:bg-sky-600';
+    $subLinkBase = 'sidebar-item sidebar-subitem flex items-center gap-2 rounded-lg py-2 pl-9 pr-3 text-sm text-slate-300 whitespace-nowrap no-underline transition-colors hover:bg-white/10 hover:text-white';
+    $sectionTitle = 'sidebar-section px-3 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400 whitespace-nowrap first:pt-0';
+    $summaryBase = 'sidebar-item flex list-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-200 whitespace-nowrap transition-colors hover:bg-white/10 hover:text-white cursor-pointer [&::-webkit-details-marker]:hidden';
 @endphp
 
-<a class="sidebar-brand d-flex align-items-center gap-2 text-white text-decoration-none" href="{{ route('dashboard') }}">
-    <img src="{{ asset('assets/img/logo_sispam.jpg') }}" alt="SISPAM" class="rounded-circle border border-info shadow-sm" style="height: 38px; width: 38px; object-fit: cover;">
-    <span class="fw-bold fs-5" style="letter-spacing: 1px;">SISPAM</span>
+<a href="{{ route('dashboard') }}" class="sidebar-item mb-1 flex items-center gap-2 px-2 pb-3 text-white no-underline" title="SISPAM">
+    <img src="{{ asset('assets/img/logo_sispam.jpg') }}" alt="SISPAM" class="h-9 w-9 shrink-0 rounded-full border border-sky-400 object-cover shadow-sm">
+    <span class="sidebar-label text-lg font-bold tracking-wide">SISPAM</span>
 </a>
 
-<ul class="nav nav-pills flex-column sidebar-nav">
-    <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-            <i class="fa-solid fa-chart-line"></i> <span>Inicio</span>
+<nav class="sidebar-nav flex-1 overflow-y-auto overflow-x-hidden pb-2">
+    <p class="{{ $sectionTitle }}">Principal</p>
+    <a href="{{ route('dashboard') }}" title="Inicio" class="{{ $linkBase }} {{ request()->routeIs('dashboard') ? $linkActive : '' }}">
+        <i class="fa-solid fa-house-medical w-5 shrink-0 text-center text-sky-400"></i>
+        <span class="sidebar-label flex-1 truncate">Inicio</span>
+    </a>
+
+    @if ($verOperacion)
+        <p class="{{ $sectionTitle }}">Operación</p>
+        <details class="group" @if ($operacionAbierta) open @endif>
+            <summary class="{{ $summaryBase }} {{ $operacionAbierta ? 'text-white' : '' }}" title="Flujo Asistencial">
+                <i class="fa-solid fa-heart-pulse w-5 shrink-0 text-center text-blue-400"></i>
+                <span class="sidebar-label flex-1 truncate">Flujo Asistencial</span>
+                <i class="fa-solid fa-chevron-right sidebar-caret text-xs transition-transform duration-200 group-open:rotate-90"></i>
+            </summary>
+            <div class="mt-0.5 flex flex-col gap-0.5">
+                @if ($u->hasPermission('ingreso'))
+                    <a href="{{ route('ingreso.index') }}" title="Admisión / Ingreso" class="{{ $subLinkBase }} {{ request()->routeIs('ingreso.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-user-plus w-5 shrink-0 text-center text-blue-400"></i>
+                        <span class="sidebar-label truncate">Admisión / Ingreso</span>
+                    </a>
+                @endif
+                @if ($u->hasPermission('transcripcion'))
+                    <a href="{{ route('transcripcion.index') }}" title="Transcripción &amp; Stock" class="{{ $subLinkBase }} {{ request()->routeIs('transcripcion.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-file-signature w-5 shrink-0 text-center text-cyan-400"></i>
+                        <span class="sidebar-label truncate">Transcripción &amp; Stock</span>
+                    </a>
+                @endif
+                @if ($u->hasPermission('alistamiento'))
+                    <a href="{{ route('alistamiento.index') }}" title="Alistamiento" class="{{ $subLinkBase }} {{ request()->routeIs('alistamiento.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-boxes-stacked w-5 shrink-0 text-center text-emerald-400"></i>
+                        <span class="sidebar-label truncate">Alistamiento</span>
+                    </a>
+                @endif
+                @if ($u->hasPermission('entrega'))
+                    <a href="{{ route('entrega.index') }}" title="Entrega &amp; Factura" class="{{ $subLinkBase }} {{ request()->routeIs('entrega.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-hand-holding-medical w-5 shrink-0 text-center text-rose-400"></i>
+                        <span class="sidebar-label truncate">Entrega &amp; Factura</span>
+                    </a>
+                @endif
+            </div>
+        </details>
+    @endif
+
+    @if ($u->hasPermission('ingreso') || $u->hasPermission('transcripcion'))
+        <p class="{{ $sectionTitle }}">IA &amp; Digitalización</p>
+        <a href="{{ route('ia_scanner.index') }}" title="Escáner IA" class="{{ $linkBase }} {{ request()->routeIs('ia_scanner.*') ? $linkActive : '' }}">
+            <i class="fa-solid fa-wand-magic-sparkles w-5 shrink-0 text-center text-amber-400"></i>
+            <span class="sidebar-label flex-1 truncate">Escáner IA</span>
         </a>
-    </li>
-
-    @if ($u->hasPermission('ingreso'))
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('ingreso.*') ? 'active' : '' }}" href="{{ route('ingreso.index') }}">
-                <i class="fa-solid fa-user-plus"></i> <span>Admisión / Ingreso</span>
-            </a>
-        </li>
     @endif
 
-    @if ($u->hasPermission('transcripcion'))
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('transcripcion.*') ? 'active' : '' }}" href="{{ route('transcripcion.index') }}">
-                <i class="fa-solid fa-file-signature"></i> <span>Transcripción &amp; Stock</span>
+    @if ($u->hasPermission('expedientes') || $u->hasPermission('ingreso') || $u->hasPermission('reportes'))
+        <p class="{{ $sectionTitle }}">Analítica</p>
+        @if ($u->hasPermission('expedientes') || $u->hasPermission('ingreso'))
+            <a href="{{ route('expedientes.index') }}" title="Consulta Órdenes" class="{{ $linkBase }} {{ request()->routeIs('expedientes.*') ? $linkActive : '' }}">
+                <i class="fa-solid fa-folder-open w-5 shrink-0 text-center text-blue-400"></i>
+                <span class="sidebar-label flex-1 truncate">Consulta Órdenes</span>
             </a>
-        </li>
-    @endif
-
-    @if ($u->hasPermission('alistamiento'))
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('alistamiento.*') ? 'active' : '' }}" href="{{ route('alistamiento.index') }}">
-                <i class="fa-solid fa-boxes-stacked"></i> <span>Alistamiento</span>
+        @endif
+        @if ($u->hasPermission('reportes'))
+            <a href="{{ route('reportes.index') }}" title="Reportes &amp; SLA" class="{{ $linkBase }} {{ request()->routeIs('reportes.*') ? $linkActive : '' }}">
+                <i class="fa-solid fa-chart-pie w-5 shrink-0 text-center text-cyan-400"></i>
+                <span class="sidebar-label flex-1 truncate">Reportes &amp; SLA</span>
             </a>
-        </li>
-    @endif
-
-    @if ($u->hasPermission('entrega'))
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('entrega.*') ? 'active' : '' }}" href="{{ route('entrega.index') }}">
-                <i class="fa-solid fa-hand-holding-medical"></i> <span>Entrega &amp; Factura</span>
-            </a>
-        </li>
-    @endif
-
-    @if ($u->hasPermission('reportes'))
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('reportes.*') ? 'active' : '' }}" href="{{ route('reportes.index') }}">
-                <i class="fa-solid fa-chart-pie"></i> <span>Reportes &amp; SLA</span>
-            </a>
-        </li>
-    @endif
-
-    @if ($u->hasPermission('expedientes') || $u->hasPermission('ingreso'))
-        <li class="nav-item">
-            <a class="nav-link {{ request()->routeIs('expedientes.*') ? 'active' : '' }}" href="{{ route('expedientes.index') }}">
-                <i class="fa-solid fa-folder-open"></i> <span>Consulta Órdenes</span>
-            </a>
-        </li>
+        @endif
     @endif
 
     @if ($verConfig)
-        <li class="nav-item">
-            <a class="nav-link sidebar-submenu-toggle {{ $configAbierto ? 'active' : 'collapsed' }}"
-               data-bs-toggle="collapse" href="#menuConfig" role="button"
-               aria-expanded="{{ $configAbierto ? 'true' : 'false' }}" aria-controls="menuConfig">
-                <i class="fa-solid fa-gears"></i> <span>Configuración</span>
-                <i class="fa-solid fa-chevron-down sidebar-caret ms-auto"></i>
-            </a>
-            <div class="collapse {{ $configAbierto ? 'show' : '' }}" id="menuConfig">
-                <ul class="nav nav-pills flex-column sidebar-submenu">
-                    @if ($u->hasPermission('empresa') || $esAdmin)
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('empresa.*') ? 'active' : '' }}" href="{{ route('empresa.edit') }}">
-                                <i class="fa-solid fa-building text-primary"></i> <span>Empresa &amp; Sede</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('pacientes.importar*') ? 'active' : '' }}" href="{{ route('pacientes.importar') }}">
-                                <i class="fa-solid fa-file-csv text-info"></i> <span>Carga Masiva (CSV)</span>
-                            </a>
-                        </li>
-                    @endif
-                    @if ($u->hasPermission('usuarios') || $esAdmin)
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}" href="{{ route('usuarios.index') }}">
-                                <i class="fa-solid fa-users text-success"></i> <span>Usuarios &amp; Permisos</span>
-                            </a>
-                        </li>
-                    @endif
-                    @if ($u->hasPermission('modulos') || $esAdmin)
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('modulos.*') ? 'active' : '' }}" href="{{ route('modulos.index') }}">
-                                <i class="fa-solid fa-door-open text-warning"></i> <span>Ventanillas &amp; Módulos</span>
-                            </a>
-                        </li>
-                    @endif
-                </ul>
+        <p class="{{ $sectionTitle }}">Sistema</p>
+        <details class="group" @if ($configAbierto) open @endif>
+            <summary class="{{ $summaryBase }} {{ $configAbierto ? 'text-white' : '' }}" title="Configuración">
+                <i class="fa-solid fa-gears w-5 shrink-0 text-center text-slate-400"></i>
+                <span class="sidebar-label flex-1 truncate">Configuración</span>
+                <i class="fa-solid fa-chevron-right sidebar-caret text-xs transition-transform duration-200 group-open:rotate-90"></i>
+            </summary>
+            <div class="mt-0.5 flex flex-col gap-0.5">
+                @if ($u->hasPermission('empresa') || $u->hasPermission('usuarios') || $esAdmin)
+                    <a href="{{ route('pacientes.index') }}" title="Directorio Pacientes" class="{{ $subLinkBase }} {{ request()->routeIs('pacientes.index') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-hospital-user w-5 shrink-0 text-center text-blue-400"></i>
+                        <span class="sidebar-label truncate">Directorio Pacientes</span>
+                    </a>
+                    <a href="{{ route('pacientes.importar') }}" title="Carga Masiva (CSV)" class="{{ $subLinkBase }} {{ request()->routeIs('pacientes.importar*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-file-csv w-5 shrink-0 text-center text-cyan-400"></i>
+                        <span class="sidebar-label truncate">Carga Masiva (CSV)</span>
+                    </a>
+                @endif
+                @if ($u->hasPermission('empresa') || $esAdmin)
+                    <a href="{{ route('empresa.edit') }}" title="Empresa &amp; Sede" class="{{ $subLinkBase }} {{ request()->routeIs('empresa.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-building w-5 shrink-0 text-center text-blue-400"></i>
+                        <span class="sidebar-label truncate">Empresa &amp; Sede</span>
+                    </a>
+                @endif
+                @if ($u->hasPermission('usuarios') || $esAdmin)
+                    <a href="{{ route('usuarios.index') }}" title="Usuarios &amp; Permisos" class="{{ $subLinkBase }} {{ request()->routeIs('usuarios.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-users w-5 shrink-0 text-center text-emerald-400"></i>
+                        <span class="sidebar-label truncate">Usuarios &amp; Permisos</span>
+                    </a>
+                @endif
+                @if ($u->hasPermission('modulos') || $esAdmin)
+                    <a href="{{ route('modulos.index') }}" title="Ventanillas &amp; Módulos" class="{{ $subLinkBase }} {{ request()->routeIs('modulos.*') ? 'text-white font-semibold' : '' }}">
+                        <i class="fa-solid fa-door-open w-5 shrink-0 text-center text-amber-400"></i>
+                        <span class="sidebar-label truncate">Ventanillas &amp; Módulos</span>
+                    </a>
+                @endif
             </div>
-        </li>
+        </details>
     @endif
 
-    <li class="nav-item">
-        <a class="nav-link sidebar-submenu-toggle collapsed" data-bs-toggle="collapse" href="#menuTurneros"
-           role="button" aria-expanded="false" aria-controls="menuTurneros">
-            <i class="fa-solid fa-tv"></i> <span>Turneros TV</span>
-            <i class="fa-solid fa-chevron-down sidebar-caret ms-auto"></i>
-        </a>
-        <div class="collapse" id="menuTurneros">
-            <ul class="nav nav-pills flex-column sidebar-submenu">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('turnero.uno') }}" target="_blank">
-                        <i class="fa-solid fa-desktop text-info"></i> <span>Turnero 1 (En Proceso)</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('turnero.dos') }}" target="_blank">
-                        <i class="fa-solid fa-bullhorn text-danger"></i> <span>Turnero 2 (Listo Entrega)</span>
-                    </a>
-                </li>
-            </ul>
+    <p class="{{ $sectionTitle }}">Sala de Espera</p>
+    <details class="group" @if ($turnerosAbiertos) open @endif>
+        <summary class="{{ $summaryBase }} {{ $turnerosAbiertos ? 'text-white' : '' }}" title="Turneros TV">
+            <i class="fa-solid fa-tv w-5 shrink-0 text-center text-amber-400"></i>
+            <span class="sidebar-label flex-1 truncate">Turneros TV</span>
+            <i class="fa-solid fa-chevron-right sidebar-caret text-xs transition-transform duration-200 group-open:rotate-90"></i>
+        </summary>
+        <div class="mt-0.5 flex flex-col gap-0.5">
+            <a href="{{ route('turnero.uno') }}" target="_blank" title="Turnero 1 (En Proceso)" class="{{ $subLinkBase }}">
+                <i class="fa-solid fa-desktop w-5 shrink-0 text-center text-cyan-400"></i>
+                <span class="sidebar-label truncate">Turnero 1 (En Proceso)</span>
+            </a>
+            <a href="{{ route('turnero.dos') }}" target="_blank" title="Turnero 2 (Listo Entrega)" class="{{ $subLinkBase }}">
+                <i class="fa-solid fa-bullhorn w-5 shrink-0 text-center text-rose-400"></i>
+                <span class="sidebar-label truncate">Turnero 2 (Listo Entrega)</span>
+            </a>
         </div>
-    </li>
-</ul>
+    </details>
+</nav>
 
-<div class="sidebar-footer">
-    <div class="d-flex align-items-center gap-2 mb-2 text-white">
-        <i class="fa-solid fa-circle-user fs-4 text-info"></i>
-        <div class="overflow-hidden">
-            <div class="fw-bold small text-truncate">{{ $u->nombre_completo }}</div>
-            <span class="badge bg-info text-dark">{{ $u->rol?->nombre ?: 'Usuario' }}</span>
-        </div>
-    </div>
-    <form method="POST" action="{{ route('logout') }}">
-        @csrf
-        <button type="submit" class="btn btn-outline-light btn-sm w-100">
-            <i class="fa-solid fa-right-from-bracket me-1"></i> Cerrar Sesión
-        </button>
-    </form>
+<div class="sidebar-footer flex shrink-0 items-center justify-between gap-2 whitespace-nowrap border-t border-white/10 px-2 pt-3 text-[11px] text-slate-400">
+    <span title="SISPAM 2.0"><i class="fa-solid fa-shield-halved text-emerald-400"></i> <span class="sidebar-label">SISPAM 2.0</span></span>
+    <span class="sidebar-label rounded-full border border-slate-600 bg-black/40 px-2 py-0.5 text-sky-300">Laravel</span>
 </div>

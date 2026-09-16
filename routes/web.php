@@ -10,6 +10,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EntregaController;
+use App\Http\Controllers\EscanerIaController;
 use App\Http\Controllers\ExpedientesController;
 use App\Http\Controllers\IngresoController;
 use App\Http\Controllers\ModulosController;
@@ -94,6 +95,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/expedientes', [ExpedientesController::class, 'index'])
         ->middleware('role:expedientes,ingreso')->name('expedientes.index');
 
+    Route::middleware('role:ingreso,transcripcion')->group(function () {
+        Route::get('/escaner-ia', [EscanerIaController::class, 'index'])->name('ia_scanner.index');
+        Route::post('/escaner-ia', [EscanerIaController::class, 'procesar'])->name('ia_scanner.procesar');
+    });
+
     Route::middleware('role:Administrador')->group(function () {
         Route::get('/empresa', [EmpresaController::class, 'edit'])->name('empresa.edit');
         Route::post('/empresa/general', [EmpresaController::class, 'guardarGeneral'])->name('empresa.general');
@@ -104,6 +110,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:Administrador,empresa,usuarios')->group(function () {
+        Route::get('/pacientes', [PacientesController::class, 'index'])->name('pacientes.index');
+        Route::get('/pacientes/exportar', [PacientesController::class, 'exportar'])->name('pacientes.exportar');
         Route::get('/pacientes/importar', [PacientesController::class, 'importar'])->name('pacientes.importar');
         Route::get('/pacientes/plantilla', [PacientesController::class, 'descargarPlantilla'])->name('pacientes.plantilla');
         Route::post('/pacientes/importar', [PacientesController::class, 'procesar'])->name('pacientes.procesar');

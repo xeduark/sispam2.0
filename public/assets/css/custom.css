@@ -1,4 +1,6 @@
-/* Estilos Personalizados SISPAM - Sistema de Gestión Farmacéutica */
+/* Estilos Personalizados SISPAM - Sistema de Gestión Farmacéutica
+   Variables de tema (claro/oscuro) en theme.css; estilos del topbar en topbar.css;
+   estilos del sidebar en sidebar.css. Este archivo es para el resto de componentes. */
 :root {
     --primary-color: #0d6efd;
     --primary-dark: #0a58ca;
@@ -12,19 +14,23 @@
 
 body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background-color: var(--bg-light);
-    color: #1e293b;
     min-height: 100vh;
 }
 
 /* Glassmorphism Cards */
 .card-glass {
     background: var(--glass-bg);
+    color: var(--text);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(226, 232, 240, 0.8);
     border-radius: 12px;
     box-shadow: var(--card-shadow);
+}
+
+html[data-theme="dark"] .card-glass {
+    --glass-bg: rgba(30, 41, 59, 0.85);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Header & Sidebar */

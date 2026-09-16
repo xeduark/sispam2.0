@@ -1,6 +1,6 @@
 @php
     $paciente = $ingreso->paciente;
-    $lineasRawbt = implode("\n", [
+    $lineasRawbt = implode("\n", array_filter([
         '--------------------------------',
         '   '.$config->razon_social,
         '   NIT: '.$config->nit,
@@ -15,10 +15,11 @@
         'Documento: '.$paciente->tipo_documento.' '.$paciente->numero_documento,
         'EPS: '.$paciente->eps_nombre,
         'Orientador: '.$ingreso->orientador?->nombre_completo,
+        $ingreso->contiene_mipres === 'SI' ? '*** MEDICAMENTO DE ALTO COSTO ***' : null,
         '--------------------------------',
         $config->pie_tiquete,
         "SISPAM - Gestion Farmaceutica\n\n\n\n",
-    ]);
+    ], fn ($linea) => $linea !== null));
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -111,6 +112,12 @@
             @if ($ingreso->prioridad_observacion)
                 <br><small>Obs: {{ $ingreso->prioridad_observacion }}</small>
             @endif
+        </div>
+    @endif
+
+    @if ($ingreso->contiene_mipres === 'SI')
+        <div style="border: 2px solid #000; padding: 6px; text-align: center; font-weight: bold; margin: 10px 0;">
+            ⚠ MEDICAMENTO DE ALTO COSTO ⚠
         </div>
     @endif
 

@@ -1,39 +1,11 @@
-/* Sidebar SISPAM: fijo en escritorio, offcanvas de Bootstrap en móvil. */
-
-:root {
-    --sispam-sidebar-w: 260px;
-    --sispam-sidebar-bg: #111827;
-    --sispam-sidebar-hover: rgba(255, 255, 255, .08);
-    --sispam-sidebar-active: #0284c7;
-}
-
-.sispam-body {
-    background-color: #f1f5f9;
-}
+/* Shell general de la app. El aspecto del sidebar se define con utilidades de
+   Tailwind en layouts/app.blade.php y componentes/sidebar.blade.php; aquí queda
+   solo el layout que lo envuelve y el estado "minimizado" (solo iconos), que
+   necesita reglas propias porque depende de una clase que alterna el botón. */
 
 .sispam-shell {
     display: flex;
     min-height: 100vh;
-}
-
-.sidebar {
-    width: var(--sispam-sidebar-w);
-    flex-shrink: 0;
-    background: var(--sispam-sidebar-bg);
-    padding: 1rem .75rem;
-    gap: .5rem;
-}
-
-/* El sidebar de escritorio acompaña el scroll de la página. */
-aside.sidebar {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-.sidebar-offcanvas {
-    width: var(--sispam-sidebar-w) !important;
 }
 
 .sispam-content {
@@ -41,72 +13,39 @@ aside.sidebar {
     min-width: 0; /* deja que las tablas anchas hagan scroll en vez de empujar el layout */
 }
 
-.sidebar-brand {
-    padding: .5rem .5rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, .1);
-    margin-bottom: .5rem;
-}
-
+/* El menú se desplaza sin mostrar barra: en un sidebar angosto se come el
+   ancho útil y parte los textos en dos líneas. */
 .sidebar-nav {
-    flex: 1 1 auto;
-    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
-.sidebar .nav-link {
-    display: flex;
-    align-items: center;
-    gap: .65rem;
-    color: #cbd5e1;
-    border-radius: .5rem;
-    padding: .6rem .75rem;
-    margin-bottom: .15rem;
-    font-size: .925rem;
+.sidebar-nav::-webkit-scrollbar {
+    display: none;
 }
 
-.sidebar .nav-link i {
-    width: 1.25rem;
-    text-align: center;
-    flex-shrink: 0;
+/* ===== Sidebar minimizado (solo iconos) ===== */
+#sispam-sidebar.is-mini {
+    width: 4.5rem;
 }
 
-.sidebar .nav-link:hover,
-.sidebar .nav-link:focus-visible {
-    color: #fff;
-    background-color: var(--sispam-sidebar-hover);
+#sispam-sidebar.is-mini .sidebar-label,
+#sispam-sidebar.is-mini .sidebar-section,
+#sispam-sidebar.is-mini .sidebar-caret {
+    display: none;
 }
 
-.sidebar .nav-link.active {
-    color: #fff;
-    background-color: var(--sispam-sidebar-active);
-    font-weight: 600;
+#sispam-sidebar.is-mini .sidebar-item {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 0;
 }
 
-.sidebar-caret {
-    font-size: .7rem;
-    transition: transform .2s ease;
+#sispam-sidebar.is-mini .sidebar-subitem {
+    padding-left: 0;
 }
 
-.sidebar-submenu-toggle.collapsed .sidebar-caret {
-    transform: rotate(-90deg);
-}
-
-.sidebar-submenu .nav-link {
-    padding-left: 2.1rem;
-    font-size: .875rem;
-}
-
-.sidebar-footer {
-    border-top: 1px solid rgba(255, 255, 255, .1);
-    padding-top: .75rem;
-    margin-top: auto;
-}
-
-@media print {
-    .no-print {
-        display: none !important;
-    }
-
-    .sispam-shell {
-        display: block;
-    }
+#sispam-sidebar.is-mini .sidebar-footer {
+    justify-content: center;
 }

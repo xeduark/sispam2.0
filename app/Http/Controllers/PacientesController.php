@@ -6,10 +6,65 @@ use App\Models\Paciente;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PacientesController extends Controller
 {
+    public function index(Request $request): View
+    {
+        $busqueda = trim((string) $request->query('q', ''));
+
+        $pacientes = $this->filtrar($busqueda)
+            ->orderByDesc('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('pacientes.index', compact('pacientes', 'busqueda'));
+    }
+
+    public function exportar(Request $request): BinaryFileResponse
+    {
+        $busqueda = trim((string) $request->query('q', ''));
+        $pacientes = $this->filtrar($busqueda)->orderByDesc('id')->get();
+
+        $rutaTemporal = tempnam(sys_get_temp_dir(), 'sispam_pacientes_').'.xlsx';
+
+        $writer = new Writer();
+        $writer->openToFile($rutaTemporal);
+        $writer->addRow(Row::fromValues(['Tipo Doc', 'Número Doc', 'Nombres', 'Apellidos', 'EPS', 'Celular', 'Ciudad', 'Estado']));
+
+        foreach ($pacientes as $paciente) {
+            $writer->addRow(Row::fromValues([
+                $paciente->tipo_documento,
+                $paciente->numero_documento,
+                $paciente->nombres,
+                $paciente->apellidos,
+                $paciente->eps_nombre,
+                $paciente->numero_celular,
+                $paciente->ciudad_residencia,
+                $paciente->estado,
+            ]));
+        }
+
+        $writer->close();
+
+        return response()->download($rutaTemporal, 'pacientes_sispam_'.now()->format('Ymd_His').'.xlsx')
+            ->deleteFileAfterSend(true);
+    }
+
+    private function filtrar(string $busqueda)
+    {
+        return Paciente::query()->when($busqueda !== '', function ($query) use ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('numero_documento', 'like', "%{$busqueda}%")
+                    ->orWhere('nombres', 'like', "%{$busqueda}%")
+                    ->orWhere('apellidos', 'like', "%{$busqueda}%");
+            });
+        });
+    }
+
     public function importar(): View
     {
         return view('pacientes.importar');
