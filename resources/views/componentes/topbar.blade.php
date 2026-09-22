@@ -5,6 +5,11 @@
         ->map(fn ($palabra) => mb_strtoupper(mb_substr($palabra, 0, 1)))
         ->take(2)
         ->implode('');
+
+    $misSedes = $u->sedesDisponibles();
+    $sedeActivaId = (int) (session('active_sede_id') ?? $u->sede_id);
+    $sedeActiva = $misSedes->firstWhere('id', $sedeActivaId) ?? \App\Models\Sede::find($sedeActivaId);
+    $puedeCambiarSede = $misSedes->count() > 1;
 @endphp
 
 <header class="sispam-topbar">
@@ -14,11 +19,42 @@
         </button>
         <div>
             <h6 class="fw-bold mb-0">@yield('subtitulo', 'Panel de control')</h6>
-            <span class="text-muted small">@yield('subtitulo_desc', config('app.name'))</span>
+           
         </div>
     </div>
 
     <div class="d-flex align-items-center gap-2">
+
+        <div class="dropdown">
+            <button class="topbar-pill topbar-pill-sede border-0 {{ $puedeCambiarSede ? 'dropdown-toggle' : '' }}" type="button"
+                    @if ($puedeCambiarSede) data-bs-toggle="dropdown" aria-expanded="false" @endif
+                    title="{{ $puedeCambiarSede ? 'Cambiar sede de trabajo' : 'Sede de trabajo asignada' }}">
+                <i class="fa-solid fa-location-dot text-success"></i>
+                <span class="d-none d-md-inline text-muted small">Sede:</span>
+                <span class="fw-bold small">{{ $sedeActiva?->nombre_sede ?? 'Sin sede' }}</span>
+            </button>
+            @if ($puedeCambiarSede)
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2 mt-2" style="min-width: 260px; max-height: 60vh; overflow-y: auto;">
+                    <li class="dropdown-header text-uppercase fw-bold text-primary small">
+                        <i class="fa-solid fa-shuffle me-1"></i> Cambiar sede de trabajo
+                    </li>
+                    @foreach ($misSedes as $sedeOpcion)
+                        <li>
+                            <form method="POST" action="{{ route('sede.cambiar', $sedeOpcion) }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item rounded-3 py-2 d-flex justify-content-between align-items-center {{ $sedeOpcion->id === $sedeActivaId ? 'active fw-bold' : '' }}">
+                                    <span><i class="fa-solid fa-building me-2"></i>{{ $sedeOpcion->nombre_sede }}</span>
+                                    @if ($sedeOpcion->id === $sedeActivaId)
+                                        <i class="fa-solid fa-check"></i>
+                                    @endif
+                                </button>
+                            </form>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+
         <button type="button" class="btn-theme-toggle" data-theme-toggle title="Cambiar tema claro/oscuro">
             <i class="fa-solid fa-moon"></i>
         </button>

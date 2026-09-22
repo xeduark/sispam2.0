@@ -34,4 +34,14 @@ class LockApiController extends Controller
 
         return response()->json(['status' => 'ok', 'message' => 'Registro liberado']);
     }
+
+    /** Compatibilidad con las vistas: POST id + action (lock|unlock), como el api/lock_record.php nativo. */
+    public function porFormulario(Request $request): JsonResponse
+    {
+        $ingreso = Ingreso::findOrFail((int) $request->input('id'));
+
+        return $request->input('action', 'lock') === 'unlock'
+            ? $this->liberar($request, $ingreso)
+            : $this->bloquear($ingreso);
+    }
 }

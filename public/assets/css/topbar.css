@@ -61,3 +61,33 @@
     font-size: .8rem;
     flex-shrink: 0;
 }
+
+/* Píldoras informativas del topbar (estado del sistema y sede de trabajo) */
+.topbar-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    background: var(--card-soft);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .35rem .8rem;
+    color: var(--text);
+}
+
+.topbar-pill-sede:hover {
+    background: var(--border);
+}
+
+.live-status-dot {
+    width: .6rem;
+    height: .6rem;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 rgba(25, 135, 84, .6);
+    animation: live-pulse 2s infinite;
+}
+
+@keyframes live-pulse {
+    70% { box-shadow: 0 0 0 .45rem rgba(25, 135, 84, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+}

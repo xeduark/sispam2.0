@@ -29,6 +29,7 @@
     @stack('estilos')
 </head>
 <body class="sispam-body">
+<script>window.SISPAM_CSRF = document.querySelector('meta[name="csrf-token"]').content;</script>
 
 <div class="sispam-shell">
     {{-- Overlay oscuro detrás del sidebar cuando está abierto en móvil --}}

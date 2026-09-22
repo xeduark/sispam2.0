@@ -18,6 +18,21 @@ class Sede extends Model
         return $this->belongsTo(Empresa::class, 'empresa_id');
     }
 
+    /**
+     * Todas las sedes como arreglos con el nombre de su empresa (formato que usan las vistas
+     * heredadas del sistema nativo: Empresa::getTodasSedes()).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function todasConEmpresa(): array
+    {
+        return static::query()
+            ->leftJoin('empresas', 'sedes.empresa_id', '=', 'empresas.id')
+            ->select('sedes.*', 'empresas.razon_social as empresa_nombre')
+            ->orderBy('empresas.razon_social')->orderBy('sedes.nombre_sede')
+            ->get()->map(fn ($s) => $s->getAttributes())->all();
+    }
+
     public function scopeActivas($query)
     {
         return $query->where('estado', 'Activo');

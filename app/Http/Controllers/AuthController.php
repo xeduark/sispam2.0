@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Sede;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,8 @@ class AuthController extends Controller
         ], $request->boolean('recordar'));
 
         if (! $ok) {
+            AuditLog::registrar('AUTENTICACION', 'LOGIN_FALLIDO', null, "Intento fallido de inicio de sesión con el usuario: {$credenciales['usuario']}");
+
             throw ValidationException::withMessages([
                 'usuario' => 'Usuario o contraseña incorrectos, o usuario inactivo.',
             ]);
@@ -40,11 +43,13 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        // Sede activa opcional para esta sesión: activa el filtro multi-sede de Ingreso
-        // (App\Services\IngresoService::sedeActiva()), que hasta ahora nunca se llenaba.
-        if (! empty($credenciales['sede_id'])) {
-            $request->session()->put('active_sede_id', $credenciales['sede_id']);
-        }
+        // Sede de trabajo: la elegida al entrar (si le está permitida) o la de su ficha.
+        $usuario = $request->user();
+        $sedeElegida = (int) ($credenciales['sede_id'] ?? 0);
+        $sedeActiva = $sedeElegida && $usuario->puedeTrabajarEnSede($sedeElegida) ? $sedeElegida : $usuario->sede_id;
+        $request->session()->put('active_sede_id', $sedeActiva);
+
+        AuditLog::registrar('AUTENTICACION', 'LOGIN_EXITOSO', $usuario->id, "Inicio de sesión exitoso usuario: {$usuario->usuario} ({$usuario->nombre_completo})");
 
         return redirect()->intended(route('dashboard'));
     }

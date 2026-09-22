@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Ingreso;
 use App\Models\ModuloEntrega;
 use App\Models\Paciente;
@@ -44,14 +45,16 @@ class IngresoService
         ?string $prioridadObs = null,
         string $personaReclama = 'PACIENTE_DIRECTO',
         ?string $ipsRemite = null,
-        bool $medicamentoAltoCosto = false
+        bool $esAltoCosto = false
     ): array {
         $ticket = $this->generarTicketConsecutivo();
         $folderName = $paciente->numero_documento.'_'.now()->format('dmy');
         $relDir = "assets/uploads/pacientes/{$paciente->tipo_documento}_{$paciente->numero_documento}/{$folderName}/";
 
-        return DB::transaction(function () use ($paciente, $orientadorId, $archivos, $prioridad, $prioridadObs, $personaReclama, $ipsRemite, $medicamentoAltoCosto, $ticket, $relDir) {
+        return DB::transaction(function () use ($paciente, $orientadorId, $archivos, $prioridad, $prioridadObs, $personaReclama, $ipsRemite, $esAltoCosto, $ticket, $relDir) {
             $ingreso = Ingreso::create([
+                'empresa_id' => sesion('empresa_id', 1),
+                'sede_id' => $this->sedeActiva() ?? 1,
                 'ticket_numero' => $ticket,
                 'paciente_id' => $paciente->id,
                 'orientador_id' => $orientadorId,
@@ -61,7 +64,7 @@ class IngresoService
                 'prioridad_observacion' => $prioridadObs ?: null,
                 'persona_reclama' => $personaReclama ?: 'PACIENTE_DIRECTO',
                 'ips_remite' => $ipsRemite ?: null,
-                'contiene_mipres' => $medicamentoAltoCosto ? 'SI' : 'NO',
+                'es_alto_costo' => $esAltoCosto ? 1 : 0,
             ]);
 
             foreach ($archivos as $tipoDocumento => $archivo) {
@@ -69,29 +72,58 @@ class IngresoService
                     continue;
                 }
 
-                $nombreLimpio = strtolower($tipoDocumento).'_'.time().'.'.$archivo->getClientOriginalExtension();
+                $tipoDocumento = $this->clasificarDocumento($tipoDocumento, $archivo->getClientOriginalName());
+                $nombreLimpio = strtolower($tipoDocumento).'_'.time().'_'.random_int(100, 999).'.'.$archivo->getClientOriginalExtension();
                 $archivo->move(public_path($relDir), $nombreLimpio);
 
-                $ingreso->documentos()->create([
+                $documento = $ingreso->documentos()->create([
                     'tipo_documento' => $tipoDocumento,
                     'ruta_archivo' => $relDir.$nombreLimpio,
                     'nombre_original' => $archivo->getClientOriginalName(),
                 ]);
+
+                // Las fórmulas quedan en cola para la extracción con IA (Verificación IA / worker).
+                if (in_array($tipoDocumento, ['ORDEN_MEDICA', 'MIPRES'], true)) {
+                    DB::table('ingreso_formulas_ia')->insert([
+                        'ingreso_id' => $ingreso->id,
+                        'documento_id' => $documento->id,
+                        'estado_ia' => 'PENDIENTE',
+                        'created_at' => now(),
+                    ]);
+                }
             }
+
+            AuditLog::registrar('INGRESO', 'CREAR_INGRESO', $ingreso->id, "Nuevo paciente registrado Doc: {$paciente->tipo_documento} {$paciente->numero_documento}. Tiquete: {$ticket}");
 
             return ['id' => $ingreso->id, 'ticket' => $ticket];
         });
     }
 
-    /**
-     * Sede activa del sistema legacy. Ojo: en el sistema original estas claves de
-     * sesión se leían pero nunca se escribían, así que el filtro multi-sede nunca
-     * llegó a activarse. Se conserva la misma cadena de fallback para no cambiar
-     * el comportamiento actual.
-     */
+    /** Sede de trabajo: la elegida en el selector de sede o, por defecto, la asignada al usuario. */
     public function sedeActiva(): ?int
     {
-        return session('active_sede_id') ?? session('sede_id');
+        $sede = session('active_sede_id') ?? auth()->user()?->sede_id;
+
+        return $sede ? (int) $sede : null;
+    }
+
+    /** Tipo real del documento: si llega genérico, se deduce del nombre del archivo (igual que el nativo). */
+    private function clasificarDocumento(string $tipo, string $nombreArchivo): string
+    {
+        if (! in_array($tipo, ['', 'DOCUMENTO', 'OTRO'], true)) {
+            return $tipo;
+        }
+
+        $n = mb_strtolower($nombreArchivo);
+
+        return match (true) {
+            str_contains($n, 'mipres') => 'MIPRES',
+            str_contains($n, 'cedula') => 'CEDULA',
+            str_contains($n, 'orden'), str_contains($n, 'formula') => 'ORDEN_MEDICA',
+            str_contains($n, 'autorizacion') => 'AUTORIZACION',
+            str_contains($n, 'historia') => 'HISTORIA_CLINICA',
+            default => 'OTRO',
+        };
     }
 
     private function esAdministrador(): bool

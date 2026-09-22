@@ -24,7 +24,7 @@ Tel: {{ $config->telefono }}<br>
 {{ strip_tags(get_prioridad_badge($ingreso->prioridad)) }}<br>
 </center>
 @endif
-@if ($ingreso->contiene_mipres === 'SI')
+@if ($ingreso->es_alto_costo)
 <center>
 --------------------------------<br>
 <b>*** MEDICAMENTO DE ALTO COSTO ***</b><br>

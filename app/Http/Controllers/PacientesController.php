@@ -27,7 +27,6 @@ class PacientesController extends Controller
     public function exportar(Request $request): BinaryFileResponse
     {
         $busqueda = trim((string) $request->query('q', ''));
-        $pacientes = $this->filtrar($busqueda)->orderByDesc('id')->get();
 
         $rutaTemporal = tempnam(sys_get_temp_dir(), 'sispam_pacientes_').'.xlsx';
 
@@ -35,7 +34,9 @@ class PacientesController extends Controller
         $writer->openToFile($rutaTemporal);
         $writer->addRow(Row::fromValues(['Tipo Doc', 'Número Doc', 'Nombres', 'Apellidos', 'EPS', 'Celular', 'Ciudad', 'Estado']));
 
-        foreach ($pacientes as $paciente) {
+        // cursor() en lugar de get(): la tabla de pacientes puede tener decenas de miles de filas
+        // (dato real de producción); hidratar todo el resultado a la vez agota la memoria.
+        $this->filtrar($busqueda)->orderByDesc('id')->cursor()->each(function (Paciente $paciente) use ($writer) {
             $writer->addRow(Row::fromValues([
                 $paciente->tipo_documento,
                 $paciente->numero_documento,
@@ -46,7 +47,7 @@ class PacientesController extends Controller
                 $paciente->ciudad_residencia,
                 $paciente->estado,
             ]));
-        }
+        });
 
         $writer->close();
 
