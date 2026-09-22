@@ -74,7 +74,7 @@ class IngresoController extends Controller
                     trim((string) $request->input('prioridad_observacion', '')),
                     $personaReclama,
                     trim((string) $request->input('ips_remite', '')),
-                    $request->boolean('medicamento_alto_costo')
+                    $request->boolean('es_alto_costo')
                 );
 
                 $ticketGenerado = $resultado['ticket'];

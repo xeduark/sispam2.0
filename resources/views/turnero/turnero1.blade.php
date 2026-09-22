@@ -1,28 +1,42 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turnero 1 - En Proceso - {{ $config->razon_social }}</title>
-    <link rel="icon" type="image/jpeg" href="{{ asset('assets/img/logo_sispam.jpg') }}">
-    <link rel="shortcut icon" type="image/jpeg" href="{{ asset('assets/img/logo_sispam.jpg') }}">
-    <link rel="apple-touch-icon" href="{{ asset('assets/img/logo_sispam.jpg') }}">
+    <title>Turnero 1 - En Proceso - {{ $config['razon_social'] }} ({{ $nombre_sede_mostrar }})</title>
+    <!-- Favicon SISPAM -->
+    <link rel="icon" type="image/jpeg" href="assets/img/logo_sispam.jpg">
+    <link rel="shortcut icon" type="image/jpeg" href="assets/img/logo_sispam.jpg">
+    <link rel="apple-touch-icon" href="assets/img/logo_sispam.jpg">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}">
+    <link rel="stylesheet" href="assets/css/custom.css">
 </head>
 <body class="turnero-bg">
 
-<div class="container-fluid py-3 px-4 bg-dark bg-opacity-50 border-bottom border-secondary d-flex justify-content-between align-items-center">
+<!-- Encabezado Turnero TV -->
+<div class="container-fluid py-3 px-4 bg-dark bg-opacity-50 border-bottom border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div class="d-flex align-items-center gap-3">
-        @if ($config->logo_url && file_exists(public_path($config->logo_url)))
-            <img src="{{ asset($config->logo_url) }}" alt="Logo" style="max-height: 60px;">
-        @else
+        
+@if (!empty($config['logo_url']) && file_exists(public_path() . '/' . $config['logo_url']))
+
+            <img src="{{ $config['logo_url'] }}" alt="Logo" style="max-height: 60px;">
+        
+@else
+
             <i class="fa-solid fa-prescription-bottle-medical fs-1 text-info"></i>
-        @endif
+        
+@endif
+
         <div>
-            <h2 class="fw-bold mb-0 text-white">{{ $config->razon_social }}</h2>
-            <div class="text-info fw-semibold fs-5"><i class="fa-solid fa-hourglass-half me-2"></i> SALA DE ESPERA - PACIENTES EN PROCESO</div>
+            <h2 class="fw-bold mb-0 text-white">{{ $config['razon_social'] }}</h2>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge bg-warning text-dark fs-6 py-1 px-3 fw-bold rounded-pill shadow-sm">
+                    <i class="fa-solid fa-location-dot me-1"></i> SEDE: {{ $nombre_sede_mostrar }}
+                </span>
+                <span class="text-info fw-semibold fs-5"><i class="fa-solid fa-hourglass-half me-1"></i> SALA DE ESPERA - PACIENTES EN PROCESO</span>
+            </div>
         </div>
     </div>
     <div class="text-end text-white">
@@ -33,15 +47,17 @@
 
 <div class="container-fluid p-4">
     <div class="row g-4">
+        <!-- Columna Izquierda: Video Institucional -->
         <div class="col-lg-6">
             <div class="turnero-card p-3 h-100 shadow-lg">
                 <h4 class="fw-bold text-white mb-3"><i class="fa-solid fa-video me-2 text-info"></i> Informativo Institucional</h4>
                 <div class="ratio ratio-16x9 rounded overflow-hidden shadow">
-                    <video id="video-player" src="{{ $config->video_turnero_url }}" autoplay loop muted playsinline controls></video>
+                    <video id="video-player" src="{{ $config['video_turnero_url'] }}" autoplay loop muted playsinline controls></video>
                 </div>
             </div>
         </div>
 
+        <!-- Columna Derecha: Grilla de Atenciones En Proceso -->
         <div class="col-lg-6">
             <div class="turnero-card p-4 h-100 shadow-lg">
                 <h3 class="fw-bold text-white mb-3 text-center border-bottom border-secondary pb-2">
@@ -58,7 +74,7 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-turnero1">
-                            {{-- Inyección vía AJAX --}}
+                            <!-- Inyección vía AJAX -->
                         </tbody>
                     </table>
                 </div>
@@ -67,16 +83,15 @@
     </div>
 </div>
 
+<!-- Marquesina Informativa -->
 <div class="fixed-bottom marquesina-container shadow-lg">
     <div class="marquesina-text" id="marquesina-content">
-        {{ $config->marquesina_turnero }}
+        {{ $config['marquesina_turnero'] }}
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const TURNERO_DATA_URL = @json(route('api.turnero.data'));
-
 document.addEventListener('DOMContentLoaded', () => {
     actualizarReloj();
     setInterval(actualizarReloj, 1000);
@@ -91,8 +106,10 @@ function actualizarReloj() {
     document.getElementById('fecha-digital').innerText = now.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+const activeSedeId = '{{ $active_sede_id }}';
+
 function actualizarTurnero1() {
-    fetch(TURNERO_DATA_URL + '?type=1')
+    fetch('{{ route('api.turnero.data') }}?type=1&sede_id=' + encodeURIComponent(activeSedeId))
         .then(res => res.json())
         .then(data => {
             const tbody = document.getElementById('tabla-turnero1');

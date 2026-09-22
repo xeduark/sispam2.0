@@ -46,11 +46,17 @@ class AiExtractorService
 
     public function extraerDatosFormula(UploadedFile $archivo, ?string $apiKeyOverride = null): array
     {
+        return $this->extraerDatosDesdeRuta($archivo->getRealPath(), $archivo->getClientOriginalName(), $archivo->getMimeType(), $apiKeyOverride);
+    }
+
+    /** Igual que extraerDatosFormula() pero para un archivo ya guardado en disco (reprocesamiento desde la cola IA). */
+    public function extraerDatosDesdeRuta(string $rutaAbsoluta, string $nombreOriginal, ?string $mime = null, ?string $apiKeyOverride = null): array
+    {
         $inicio = microtime(true);
         $key = trim($apiKeyOverride ?: (config('ia_scanner.gemini_api_key') ?: ''));
 
         if ($key === '') {
-            $resultado = $this->extractorSimuladoInteligente($archivo->getClientOriginalName());
+            $resultado = $this->extractorSimuladoInteligente($nombreOriginal);
             $resultado['tiempo_segundos'] = round(microtime(true) - $inicio, 2);
             $resultado['motor'] = 'Extractor Clínico Demostrativo SISPAM (Local)';
             $resultado['modo'] = 'demo_local';
@@ -59,7 +65,7 @@ class AiExtractorService
         }
 
         try {
-            $resultado = $this->ejecutarLlamadaGenerativa($archivo, $key);
+            $resultado = $this->ejecutarLlamadaGenerativa($rutaAbsoluta, $mime, $key);
             $resultado['tiempo_segundos'] = round(microtime(true) - $inicio, 2);
             $resultado['motor'] = 'Google Gemini ('.config('ia_scanner.modelo').') - Live Vision OCR';
             $resultado['modo'] = 'en_vivo';
@@ -73,13 +79,13 @@ class AiExtractorService
         }
     }
 
-    private function ejecutarLlamadaGenerativa(UploadedFile $archivo, string $key): array
+    private function ejecutarLlamadaGenerativa(string $rutaAbsoluta, ?string $mimeHint, string $key): array
     {
         $modelo = config('ia_scanner.modelo');
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelo}:generateContent";
 
-        $mime = $archivo->getMimeType() ?: 'application/octet-stream';
-        $base64 = base64_encode(file_get_contents($archivo->getRealPath()));
+        $mime = $mimeHint ?: (function_exists('mime_content_type') ? mime_content_type($rutaAbsoluta) : null) ?: 'application/octet-stream';
+        $base64 = base64_encode(file_get_contents($rutaAbsoluta));
 
         $respuesta = Http::timeout(30)->post("{$url}?key={$key}", [
             'contents' => [[

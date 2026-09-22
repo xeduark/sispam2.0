@@ -4,65 +4,60 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmpresaConfig;
-use App\Models\Ingreso;
+use App\Models\Sede;
+use App\Services\FlujoIngresoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TurneroApiController extends Controller
 {
-    /** Pantallas públicas de sala de espera: sin autenticación, como el legacy. */
-    public function data(Request $request): JsonResponse
+    /**
+     * Datos de las pantallas de sala de espera (públicas, sin autenticación, kioscos de TV).
+     * type=1: pacientes en proceso; type=2: listos para entrega + último rellamado.
+     * La sede se resuelve de forma estricta para que no se filtren turnos ni audios entre sedes.
+     */
+    public function data(Request $request, FlujoIngresoService $flujo): JsonResponse
     {
-        $tipo = (string) $request->query('type', '1');
+        $sedeId = (int) $request->query('sede_id', 0);
+        $sedeId = $sedeId > 0 ? $sedeId : (int) (session('active_sede_id') ?: 1);
 
-        return response()->json([
-            'config' => EmpresaConfig::actual(),
-            'turnos' => $tipo === '1' ? $this->enProceso() : $this->listosParaEntrega(),
-        ]);
+        $turnos = $request->query('type', '1') === '1' ? $flujo->getTurnero1($sedeId) : $flujo->getTurnero2($sedeId);
+        $respuesta = [
+            'config' => EmpresaConfig::actual()->toArray(),
+            'sede_id' => $sedeId,
+            'sede_nombre' => Sede::find($sedeId)?->nombre_sede ?? 'Sede Principal',
+            'turnos' => array_map(fn ($t) => $this->conNombres($t), $turnos),
+        ];
+
+        if ($request->query('type', '1') !== '1') {
+            $ultimo = $flujo->getUltimoRellamado($sedeId, 20);
+            $respuesta['ultimo_rellamado'] = $ultimo ? $this->conNombres($ultimo) : $ultimo;
+        }
+
+        return response()->json($respuesta);
     }
 
-    private function enProceso(): array
+    private function conNombres(array $fila): array
     {
-        return Ingreso::with('paciente')
-            ->whereIn('estado_tramite', ['INGRESADO', 'EN_TRANSCRIPCION', 'TRANSCRITO_COMPLETO', 'TRANSCRITO_PENDIENTE'])
-            ->ordenAtencion()
-            ->limit(12)
-            ->get()
-            ->map(fn (Ingreso $i) => [
-                'ticket_numero' => $i->ticket_numero,
-                'estado_tramite' => $i->estado_tramite,
-                'fecha_ingreso' => $i->fecha_ingreso,
-                'prioridad' => $i->prioridad,
-                // Habeas Data: en pantalla pública solo primer nombre e inicial del apellido.
-                'nombre_habeas' => $this->anonimizar($i->paciente?->nombres, $i->paciente?->apellidos),
-            ])
-            ->all();
+        $fila['nombre_habeas'] = $this->anonimizar($fila['nombres'] ?? '', $fila['apellidos'] ?? '');
+        $fila['nombre_completo'] = trim(($fila['nombres'] ?? '').' '.($fila['apellidos'] ?? ''));
+
+        return $fila;
     }
 
-    private function listosParaEntrega(): array
+    /** Habeas Data en pantallas públicas: primer nombre completo y solo 2 letras de cada apellido. */
+    private function anonimizar(string $nombres, string $apellidos): string
     {
-        return Ingreso::with('paciente')
-            ->where('estado_tramite', 'ALISTADO')
-            ->orderByRaw("IF(prioridad = 'NORMAL', 1, 0) ASC")
-            ->orderByDesc('updated_at')
-            ->limit(10)
-            ->get()
-            ->map(fn (Ingreso $i) => [
-                'id' => $i->id,
-                'ticket_numero' => $i->ticket_numero,
-                'modulo_entrega_asignado' => $i->modulo_entrega_asignado,
-                'updated_at' => $i->updated_at,
-                'prioridad' => $i->prioridad,
-                'nombre_completo' => mb_strtoupper(trim($i->paciente?->nombres.' '.$i->paciente?->apellidos)),
-            ])
-            ->all();
-    }
+        $primerNombre = mb_convert_case(preg_split('/\s+/', trim($nombres))[0] ?? '', MB_CASE_TITLE, 'UTF-8');
 
-    private function anonimizar(?string $nombres, ?string $apellidos): string
-    {
-        $n = explode(' ', trim((string) $nombres))[0] ?? '';
-        $a = explode(' ', trim((string) $apellidos))[0] ?? '';
+        $apellidosAnonimos = collect(preg_split('/\s+/', trim($apellidos)))
+            ->filter()
+            ->map(function ($ape) {
+                $prefijo = mb_convert_case(mb_substr($ape, 0, 2, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
 
-        return mb_strtoupper($n).' '.mb_substr($a, 0, 1).'***';
+                return $prefijo.(mb_strlen($ape, 'UTF-8') <= 2 ? '****' : '******');
+            })->implode(' ');
+
+        return trim($primerNombre.' '.$apellidosAnonimos);
     }
 }

@@ -63,6 +63,10 @@ return [
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
                 // Hora Colombia: el sistema legacy escribía todos los datetime en -05:00
                 Mysql::ATTR_INIT_COMMAND => "SET time_zone = '-05:00'",
+                // La lógica heredada (Inventario, Facturación...) usa el PDO crudo con fetch() sin
+                // argumentos: sin esto devolvería cada columna duplicada (nombre + índice numérico).
+                // Eloquent y el Query Builder fijan su propio modo por consulta, así que no les afecta.
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
             ]) : [],
         ],
 

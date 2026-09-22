@@ -68,9 +68,13 @@
 
     @if ($u->hasPermission('ingreso') || $u->hasPermission('transcripcion'))
         <p class="{{ $sectionTitle }}">IA &amp; Digitalización</p>
-        <a href="{{ route('ia_scanner.index') }}" title="Escáner IA" class="{{ $linkBase }} {{ request()->routeIs('ia_scanner.*') ? $linkActive : '' }}">
+        <a href="{{ route('ia_scanner.index') }}" title="Escáner IA" class="{{ $linkBase }} {{ request()->routeIs('ia_scanner.index') ? $linkActive : '' }}">
             <i class="fa-solid fa-wand-magic-sparkles w-5 shrink-0 text-center text-amber-400"></i>
             <span class="sidebar-label flex-1 truncate">Escáner IA</span>
+        </a>
+        <a href="{{ route('ia_scanner.cola') }}" title="Cola de Procesamiento IA" class="{{ $linkBase }} {{ request()->routeIs('ia_scanner.cola') ? $linkActive : '' }}">
+            <i class="fa-solid fa-list-check w-5 shrink-0 text-center text-amber-400"></i>
+            <span class="sidebar-label flex-1 truncate">Cola IA</span>
         </a>
     @endif
 

@@ -3,109 +3,445 @@
 @section('titulo', 'Consulta de Expedientes - '.config('app.name'))
 
 @section('content')
+<style>
+.expediente-hero-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 16px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+}
+.avatar-patient-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    font-size: 1.8rem;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+.table-expedientes thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    padding: 12px 14px;
+}
+.table-expedientes tbody td {
+    padding: 14px 14px;
+    vertical-align: middle;
+}
+.badge-soft-primary { background-color: #e0e7ff; color: #3730a3; }
+.badge-soft-success { background-color: #dcfce7; color: #166534; }
+.badge-soft-warning { background-color: #fef3c7; color: #92400e; }
+.badge-soft-info { background-color: #e0f2fe; color: #075985; }
+.dropdown-menu-custom {
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    min-width: 240px;
+}
+.dropdown-item-custom {
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.dropdown-item-custom:hover {
+    background-color: #f8fafc;
+    color: #0284c7;
+}
+</style>
 
-<div class="row mb-4">
-    <div class="col-md-8">
-        <h4 class="fw-bold text-primary mb-1"><i class="fa-solid fa-folder-tree me-2"></i> Módulo de Consulta de Expedientes</h4>
-        <p class="text-muted small">Busca el historial de ingresos, tiquetes, órdenes médicas adjuntas y reimprime las actas de entrega firmadas.</p>
-    </div>
-</div>
-
-<div class="card card-glass p-4 shadow-sm border-0 mb-4">
-    <form method="GET" action="{{ route('expedientes.index') }}" class="row g-3 align-items-center">
-        <div class="col-md-6">
-            <label class="form-label fw-semibold" for="num_doc">Número de Documento del Paciente</label>
-            <div class="input-group">
-                <span class="input-group-text bg-white"><i class="fa-solid fa-id-card text-muted"></i></span>
-                <input type="text" id="num_doc" name="num_doc" class="form-control" placeholder="Ej: 88197902" value="{{ $numDoc }}" required autofocus>
-                <button type="submit" class="btn btn-primary fw-bold px-4">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i> Buscar Histórico
-                </button>
-            </div>
+<div class="container-fluid px-4 py-2">
+    <!-- Encabezado de Página -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h4 class="fw-bold text-primary mb-1">
+                <i class="fa-solid fa-folder-tree me-2"></i> Módulo de Consulta de Expedientes
+            </h4>
+            <p class="text-muted small mb-0">Consulta centralizada de atenciones, trazabilidad de turnos, soportes médicos y actas de entrega firmadas.</p>
         </div>
-    </form>
-</div>
+    </div>
 
-@if ($numDoc !== '')
-    @if ($resultados->isNotEmpty())
-        @php $paciente = $resultados->first()->paciente; @endphp
-        <div class="card card-glass border-0 shadow-sm">
-            <div class="card-header bg-white py-3">
-                <h5 class="fw-bold mb-0 text-primary">
-                    <i class="fa-solid fa-user me-2"></i> Paciente: {{ $paciente->nombres }} {{ $paciente->apellidos }}
-                    <span class="badge bg-secondary ms-2">{{ $paciente->tipo_documento }} {{ $paciente->numero_documento }}</span>
-                    <span class="badge bg-info text-dark ms-1">{{ $paciente->eps_nombre }}</span>
-                </h5>
+    <!-- Buscador Principal -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3 p-md-4">
+            <form method="GET" action="{{ route('expedientes.index') }}" class="row g-2 align-items-center">
+                <input type="hidden" name="page" value="expedientes">
+                <div class="col-md-6 col-lg-5">
+                    <label class="form-label small fw-bold text-muted mb-1">Buscar por Cédula, Tiquete o Nombre:</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-primary"></i></span>
+                        <input type="text" name="num_doc" class="form-control bg-light border-start-0 ps-0" placeholder="Ej: 1036780004 o TK-260828-0003" value="{{ $num_doc }}" required autofocus>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                            <i class="fa-solid fa-search me-1"></i> Consultar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    
+@if (!empty($num_doc))
+
+        @if (!empty($resultados))
+
+            @php
+$paciente = $resultados[0];
+                $totalAtenciones = count($resultados);
+@endphp
+
+            <!-- Ficha Resumen del Paciente (Hero Card) -->
+            <div class="expediente-hero-card p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="avatar-patient-icon">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div>
+                            <div class="text-white-50 small text-uppercase fw-semibold" style="letter-spacing: 0.5px;">PACIENTE REGISTRADO EN SISPAM</div>
+                            <h3 class="fw-bold text-white mb-1">{{ $paciente['nombres'] . ' ' . $paciente['apellidos'] }}</h3>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary px-2 py-1"><i class="fa-solid fa-id-badge me-1"></i> {{ $paciente['tipo_documento'] . ' ' . $paciente['numero_documento'] }}</span>
+                                <span class="badge bg-info text-dark px-2 py-1"><i class="fa-solid fa-hospital-user me-1"></i> {{ $paciente['eps_nombre'] ?? 'No especificada' }}</span>
+                                
+@if (!empty($paciente['telefono']))
+
+                                    <span class="badge bg-secondary px-2 py-1"><i class="fa-solid fa-phone me-1"></i> {{ $paciente['telefono'] }}</span>
+                                
+@endif
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-md-end border-top border-md-top-0 pt-3 pt-md-0 border-secondary">
+                        <div class="text-white-50 small">HISTORIAL DE ATENCIONES</div>
+                        <div class="fs-2 fw-bold text-warning">{{ $totalAtenciones }} {{ $totalAtenciones === 1 ? 'Atención' : 'Atenciones' }}</div>
+                        <div class="small text-white-50"><i class="fa-solid fa-circle-check text-success me-1"></i> Expediente Activo</div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-3">Tiquete</th>
-                                <th>Fecha Ingreso</th>
-                                <th>Estado</th>
-                                <th>Orientador</th>
-                                <th>Documentos &amp; Firma</th>
-                                <th class="text-end pe-3">Reimpresión &amp; Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($resultados as $ing)
+
+            <!-- Grilla Principal de Historial de Órdenes -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-list-check me-2 text-primary"></i> Registro Cronológico de Atenciones
+                    </h6>
+                    <span class="badge badge-soft-primary px-3 py-2 fw-bold">{{ $totalAtenciones }} Registros Encontrados</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-expedientes align-middle mb-0">
+                            <thead>
                                 <tr>
-                                    <td class="ps-3 fw-bold text-primary">{{ $ing->ticket_numero }}</td>
-                                    <td>{{ $ing->fecha_ingreso?->format('d/m/Y h:i A') }}</td>
-                                    <td>
-                                        {!! get_estado_badge($ing->estado_tramite) !!}
-                                        {!! get_prioridad_badge($ing->prioridad ?? 'NORMAL') !!}
+                                    <th class="ps-4">Tiquete & Estado</th>
+                                    <th>Fecha de Ingreso</th>
+                                    <th>Orientador / Sede</th>
+                                    <th>Novedad / Faltantes</th>
+                                    <th class="text-center">Soportes Digitales</th>
+                                    <th class="text-end pe-4">Reimpresión & Acta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+@foreach ($resultados as $ing)
+
+                                @php
+$detalles = $ingresoModel->getById($ing['id']);
+                                    
+                                    // Función para normalizar nombres e iconos de soportes
+                                    if (!function_exists('resolverNombreDocExpediente')) {
+                                        function resolverNombreDocExpediente($tipo, $url = '') {
+                                            $t = strtoupper(trim($tipo ?? ''));
+                                            $filename = strtolower(basename($url ?? ''));
+
+                                            // 1. Mipres (evaluado antes para no confundirse con la subcarpeta soportes_savia)
+                                            if (str_contains($t, 'MIPRES') || str_contains($filename, 'mipres')) {
+                                                return ['tipo' => 'Direccionamiento / Mipres', 'icon' => 'fa-solid fa-file-prescription text-primary'];
+                                            }
+                                            // 2. Validación de Derechos de Savia
+                                            if (str_contains($t, 'DERECHOS') || str_contains($filename, 'derechos') || str_contains($filename, 'validacion') || (str_contains($t, 'SAVIA') && !str_contains($t, 'MIPRES'))) {
+                                                return ['tipo' => 'Validación Derechos Savia', 'icon' => 'fa-solid fa-shield-heart text-success'];
+                                            }
+                                            // 3. Cédula / Documento de Identidad
+                                            if ($t === 'CEDULA' || str_contains($t, 'IDENTIDAD') || str_contains($filename, 'cedula')) {
+                                                return ['tipo' => 'Cédula / Documento de Identidad', 'icon' => 'fa-solid fa-id-card text-primary'];
+                                            }
+                                            // 4. Fórmula / Orden Médica
+                                            if ($t === 'ORDEN_MEDICA' || str_contains($t, 'FORMULA') || str_contains($t, 'MEDICA') || str_contains($filename, 'orden_medica') || str_contains($filename, 'formula')) {
+                                                return ['tipo' => 'Fórmula / Orden Médica', 'icon' => 'fa-solid fa-file-medical text-danger'];
+                                            }
+                                            // 5. Autorización / Poder Tercero
+                                            if ($t === 'AUTORIZACION' || str_contains($filename, 'autorizacion') || str_contains($filename, 'poder')) {
+                                                return ['tipo' => 'Autorización / Poder Tercero', 'icon' => 'fa-solid fa-file-shield text-warning'];
+                                            }
+                                            // 6. Historia Clínica
+                                            if ($t === 'HISTORIA_CLINICA' || str_contains($filename, 'historia')) {
+                                                return ['tipo' => 'Historia Clínica / Anexo', 'icon' => 'fa-solid fa-clipboard-user text-info'];
+                                            }
+                                            // 7. Transcripción
+                                            if ($t === 'TRANSCRIPCION' || str_contains($t, 'TRANSCRIP') || str_contains($filename, 'transcripcion')) {
+                                                return ['tipo' => 'Orden Médica Transcrita', 'icon' => 'fa-solid fa-file-circle-check text-success'];
+                                            }
+                                            // 8. Factura
+                                            if ($t === 'FACTURA' || str_contains($filename, 'factura')) {
+                                                return ['tipo' => 'Factura / Comprobante Terceros', 'icon' => 'fa-solid fa-file-invoice-dollar text-success'];
+                                            }
+                                            if (!empty($tipo) && $t !== 'DOCUMENTO' && $t !== 'OTRO') {
+                                                return ['tipo' => trim($tipo), 'icon' => 'fa-solid fa-file-pdf text-danger'];
+                                            }
+                                            return ['tipo' => 'Documento Adjunto', 'icon' => 'fa-solid fa-file-lines text-secondary'];
+                                        }
+                                    }
+
+                                    // Recopilar lista estructurada y DEDUPLICADA de soportes
+                                    $soportes = [];
+                                    $urlsVistas = [];
+
+                                    $agregarSoporte = function($tipo, $url, $icono = null) use (&$soportes, &$urlsVistas) {
+                                        if (empty($url)) return;
+                                        $urlNorm = trim($url);
+                                        if (empty($urlNorm) || isset($urlsVistas[$urlNorm])) return;
+                                        $urlsVistas[$urlNorm] = true;
+
+                                        $info = resolverNombreDocExpediente($tipo, $urlNorm);
+                                        $soportes[] = [
+                                            'tipo' => $icono ? $tipo : $info['tipo'],
+                                            'url'  => $urlNorm,
+                                            'icon' => $icono ?: $info['icon']
+                                        ];
+                                    };
+
+                                    // 1. Documentos subidos en admisión o entrega
+                                    if (!empty($detalles['documentos'])) {
+                                        foreach ($detalles['documentos'] as $doc) {
+                                            $agregarSoporte($doc['tipo_documento'] ?? '', $doc['ruta_archivo'] ?? '');
+                                        }
+                                    }
+
+                                    // 2. PDFs de Transcripción (Soporta múltiples)
+                                    if (!empty($detalles['transcripciones_archivos'])) {
+                                        foreach ($detalles['transcripciones_archivos'] as $idxT => $tDoc) {
+                                            $lblT = count($detalles['transcripciones_archivos']) > 1 ? "Orden Transcrita #" . ($idxT + 1) : "Orden Médica Transcrita";
+                                            $agregarSoporte($lblT, $tDoc['url'], 'fa-solid fa-file-circle-check text-success');
+                                        }
+                                    } elseif (!empty($detalles['pdf_transcripcion_url'])) {
+                                        $agregarSoporte('Orden Médica Transcrita', $detalles['pdf_transcripcion_url'], 'fa-solid fa-file-circle-check text-success');
+                                    }
+
+                                    // 3. Comprobante de Alistamiento
+                                    if (!empty($detalles['pdf_alistamiento'])) {
+                                        $agregarSoporte('Comprobante de Alistamiento', $detalles['pdf_alistamiento'], 'fa-solid fa-boxes-packing text-warning');
+                                    }
+
+                                    // 4. Comprobante de Factura/Terceros
+                                    if (!empty($detalles['pdf_formula_final_url'])) {
+                                        $agregarSoporte('Factura / Comprobante Terceros', $detalles['pdf_formula_final_url'], 'fa-solid fa-file-invoice-dollar text-success');
+                                    }
+
+                                    // 5. Validación de Derechos de Savia
+                                    if (!empty($detalles['pdf_validacion_derechos_url'])) {
+                                        $agregarSoporte('Validación Derechos Savia', $detalles['pdf_validacion_derechos_url'], 'fa-solid fa-shield-heart text-success');
+                                    }
+
+                                    // 6. Mipres
+                                    if (!empty($detalles['pdf_mipres_url'])) {
+                                        $agregarSoporte('Direccionamiento Mipres', $detalles['pdf_mipres_url'], 'fa-solid fa-file-prescription text-primary');
+                                    }
+
+                                    // 7. Firma Digital
+                                    if (!empty($detalles['firma_paciente_url'])) {
+                                        $agregarSoporte('Firma Digital del Paciente', $detalles['firma_paciente_url'], 'fa-solid fa-signature text-secondary');
+                                    }
+
+                                    // 8. Foto del Paciente
+                                    if (!empty($detalles['foto_paciente_url'])) {
+                                        $agregarSoporte('Registro Fotográfico Paciente', $detalles['foto_paciente_url'], 'fa-solid fa-camera text-primary');
+                                    }
+
+                                    $totalSoportes = count($soportes);
+                                    $faltantesText = !empty($detalles['faltantes_alistamiento']) ? $detalles['faltantes_alistamiento'] : ($detalles['observaciones_pendientes'] ?? '');
+                                    $tieneFaltantes = !empty($faltantesText) && !str_contains(strtoupper($faltantesText), 'VERIFICACIÓN EXITOSA');
+@endphp
+
+                                <tr>
+                                    <!-- Tiquete & Estado -->
+                                    <td class="ps-4">
+                                        <div class="fw-bold fs-5 text-primary mb-1">{{ $ing['ticket_numero'] }}</div>
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            {!! get_estado_badge($ing['estado_tramite']) !!}
+                                            {!! get_prioridad_badge($ing['prioridad'] ?? 'NORMAL') !!}
+                                        </div>
                                     </td>
-                                    <td>{{ $ing->orientador?->nombre_completo }}</td>
+
+                                    <!-- Fecha de Ingreso -->
                                     <td>
-                                        @foreach ($ing->documentos as $doc)
-                                            <a href="{{ asset($doc->ruta_archivo) }}" target="_blank" class="btn btn-sm btn-outline-dark me-1 mb-1" title="{{ $doc->tipo_documento }}">
-                                                <i class="fa-solid fa-file-pdf text-danger me-1"></i> {{ $doc->tipo_documento }}
-                                            </a>
-                                        @endforeach
-
-                                        @if ($ing->pdf_transcripcion_url)
-                                            <a href="{{ asset($ing->pdf_transcripcion_url) }}" target="_blank" class="btn btn-sm btn-outline-success me-1 mb-1" title="PDF Transcrito">
-                                                <i class="fa-solid fa-file-circle-check me-1"></i> Transcripción
-                                            </a>
-                                        @endif
-
-                                        @if ($ing->firma_paciente_url)
-                                            <a href="{{ asset($ing->firma_paciente_url) }}" target="_blank" class="btn btn-sm btn-outline-info me-1 mb-1" title="Firma Digital Paciente">
-                                                <i class="fa-solid fa-signature me-1"></i> Ver Firma
-                                            </a>
-                                        @endif
+                                        <div class="fw-semibold text-dark">{{ date('d/m/Y', strtotime($ing['fecha_ingreso'])) }}</div>
+                                        <small class="text-muted"><i class="fa-regular fa-clock me-1"></i> {{ date('h:i A', strtotime($ing['fecha_ingreso'])) }}</small>
                                     </td>
-                                    <td class="text-end pe-3">
-                                        <div class="d-flex justify-content-end gap-2 flex-wrap">
-                                            <a href="{{ route('ingreso.ticket', $ing->id) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold shadow-sm" title="Reimprimir Tiquete Térmico de Turno con datos del paciente y módulo">
-                                                <i class="fa-solid fa-print me-1"></i> Reimprimir Ticket
+
+                                    <!-- Orientador / Sede -->
+                                    <td>
+                                        <div class="fw-semibold text-dark mb-1">
+                                            <i class="fa-solid fa-user-tie text-secondary me-1"></i> {{ $ing['orientador_nombre'] ?? 'No registrado' }}
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fa-solid fa-location-dot text-warning me-1"></i> {{ $ing['nombre_sede'] ?? ($detalles['nombre_sede'] ?? 'Sede Principal') }}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    <!-- Novedad / Faltantes -->
+                                    <td>
+                                        
+@if ($tieneFaltantes)
+
+                                            <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold border-warning shadow-sm" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" title="Novedades de Medicamentos" data-bs-content="{{ $faltantesText }}">
+                                                <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> Con Faltantes
+                                            </button>
+                                        
+@else
+
+                                            <span class="badge badge-soft-success px-2 py-1"><i class="fa-solid fa-circle-check me-1"></i> Entrega 100%</span>
+                                        
+@endif
+
+                                    </td>
+
+                                    <!-- Soportes Digitales Consolidados en Menú Moderno -->
+                                    <td class="text-center">
+                                        
+@if ($totalSoportes > 0)
+
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm btn-outline-primary fw-bold dropdown-toggle shadow-sm px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fa-solid fa-folder-open me-1"></i> Soportes ({{ $totalSoportes }})
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-custom shadow">
+                                                    <li class="dropdown-header small text-uppercase fw-bold text-muted px-3 py-1">Documentos Adjuntos</li>
+                                                    
+@foreach ($soportes as $sop)
+
+                                                        <li>
+                                                            <a class="dropdown-item dropdown-item-custom d-flex align-items-center justify-content-between" href="{{ $sop['url'] }}" target="_blank">
+                                                                <span><i class="{{ $sop['icon'] }} me-2"></i> {{ $sop['tipo'] }}</span>
+                                                                <i class="fa-solid fa-arrow-up-right-from-square text-muted small ms-2"></i>
+                                                            </a>
+                                                        </li>
+                                                    
+@endforeach
+
+                                                </ul>
+                                            </div>
+                                        
+@else
+
+                                            <span class="badge bg-light text-muted border">Sin archivos</span>
+                                        
+@endif
+
+                                    </td>
+
+                                    <!-- Reimpresión & Acciones -->
+                                    <td class="text-end pe-4">
+                                        <div class="d-inline-flex align-items-center gap-1 justify-content-end">
+                                            <!-- Botón Rápido Orden Unificada -->
+                                            <a href="{{ route('alistamiento.orden_unificada', $ing['id']) }}?auto_print=1" target="_blank" class="btn btn-sm btn-outline-primary fw-bold shadow-sm px-2" title="Reimprimir Orden Unificada + Tiquete">
+                                                <i class="fa-solid fa-print me-1"></i> Orden Unificada
                                             </a>
 
-                                            @if ($ing->estado_tramite === 'ENTREGADO' || $ing->firma_paciente_url)
-                                                <a href="{{ route('entrega.acta', $ing->id) }}" target="_blank" class="btn btn-sm btn-success fw-bold shadow-sm" title="Reimprimir Acta de Entrega Firmada">
-                                                    <i class="fa-solid fa-file-signature me-1"></i> Reimprimir Acta Firmada
+                                            <!-- Botón Acta Firmada (Principal) -->
+                                            
+@if ($ing['estado_tramite'] === 'ENTREGADO' || !empty($detalles['firma_paciente_url']))
+
+                                                <a href="{{ route('entrega.acta', $ing['id']) }}" target="_blank" class="btn btn-sm btn-success fw-bold shadow-sm px-2" title="Reimprimir Acta Digital de Conformidad y Entrega">
+                                                    <i class="fa-solid fa-file-signature me-1"></i> Acta
                                                 </a>
-                                            @else
-                                                <span class="badge bg-light text-muted border align-self-center">Sin Entrega Final</span>
-                                            @endif
+                                            
+@endif
+
+
+                                            <!-- Dropdown Todos los Tiquetes y Documentos -->
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Más opciones de impresión">
+                                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom shadow">
+                                                    <li class="dropdown-header small text-uppercase fw-bold text-muted px-3 py-1">Opciones de Impresión</li>
+                                                    <li>
+                                                        <a class="dropdown-item dropdown-item-custom fw-bold text-primary" href="{{ route('alistamiento.orden_unificada', $ing['id']) }}?auto_print=1" target="_blank">
+                                                            <i class="fa-solid fa-print text-primary me-2"></i> 🖨️ Orden Unificada + Tiquete
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider my-1"></li>
+                                                    <li>
+                                                        <a class="dropdown-item dropdown-item-custom" href="{{ route('ingreso.ticket', $ing['id']) }}?auto_print=1" target="_blank">
+                                                            <i class="fa-solid fa-receipt text-secondary me-2"></i> Ticket de Ingreso / Turno
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item dropdown-item-custom" href="{{ route('alistamiento.ticket', $ing['id']) }}?auto_print=1" target="_blank">
+                                                            <i class="fa-solid fa-boxes-packing text-warning me-2"></i> Ticket de Alistamiento
+                                                        </a>
+                                                    </li>
+                                                    
+@if ($ing['estado_tramite'] === 'ENTREGADO' || !empty($detalles['firma_paciente_url']))
+
+                                                    <li>
+                                                        <a class="dropdown-item dropdown-item-custom" href="{{ route('entrega.acta', $ing['id']) }}" target="_blank">
+                                                            <i class="fa-solid fa-file-signature text-success me-2"></i> Acta de Entrega Firmada
+                                                        </a>
+                                                    </li>
+                                                    
+@endif
+
+                                                </ul>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                
+@endforeach
+
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    @else
-        <div class="alert alert-warning text-center p-4">
-            <i class="fa-solid fa-triangle-exclamation fs-3 me-2"></i> No se encontraron registros de órdenes o ingresos para el documento <strong>{{ $numDoc }}</strong>.
-        </div>
-    @endif
+        
+@else
+
+            <div class="card border-0 shadow-sm rounded-4 p-5 text-center my-4">
+                <div class="py-4">
+                    <i class="fa-solid fa-folder-open fs-1 text-muted mb-3 d-block"></i>
+                    <h5 class="fw-bold text-dark">No se encontraron expedientes</h5>
+                    <p class="text-muted small mb-0">No existen registros de ingresos u órdenes para el documento <strong>{{ $num_doc }}</strong>.</p>
+                </div>
+            </div>
+        
 @endif
 
+    @endif
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Inicializar tooltips y popovers de Bootstrap
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+});
+</script>
 @endsection

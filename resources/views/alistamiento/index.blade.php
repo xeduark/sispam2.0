@@ -3,7 +3,6 @@
 @section('titulo', 'Alistamiento - '.config('app.name'))
 
 @section('content')
-
 <!-- Librería PDF.js y jsPDF para Lectura, Edición y Recorte de Encabezados -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -22,14 +21,24 @@
     </div>
 </div>
 
-@include('partials.alertas')
+@if ($mensaje)
+
+    <div class="alert alert-success alert-dismissible fade show small"><i class="fa-solid fa-circle-check me-1"></i> {!! $mensaje !!}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@endif
+
+
+@if ($error)
+
+    <div class="alert alert-danger alert-dismissible fade show small"><i class="fa-solid fa-triangle-exclamation me-1"></i> {!! $error !!}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+@endif
+
 
 <div class="card card-glass border-0 shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h5 class="fw-bold mb-0 text-dark">
             <i class="fa-solid fa-box-open me-2 text-warning"></i> Lista de Trabajo de Alistamiento
         </h5>
-        <span class="badge bg-warning text-dark fs-6" id="badge-total-alistamiento">{{ $listaAlistamiento->count() }} En Cola</span>
+        <span class="badge bg-warning text-dark fs-6" id="badge-total-alistamiento">{{ count($listaAlistamiento) }} En Cola</span>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -38,6 +47,7 @@
                     <tr>
                         <th class="ps-3">Semaforización</th>
                         <th>Tiquete</th>
+                        <th>Sede</th>
                         <th>Hora Ingreso</th>
                         <th>Paciente</th>
                         <th>EPS</th>
@@ -46,62 +56,166 @@
                     </tr>
                 </thead>
                 <tbody id="tabla-alistamiento-body">
-                    @if ($listaAlistamiento->isEmpty())
-                        <tr><td colspan="7" class="text-center py-4 text-muted">No hay órdenes pendientes en la lista de alistamiento.</td></tr>
-                    @endif
+                    
+@if (empty($listaAlistamiento))
+
+                        <tr><td colspan="8" class="text-center py-4 text-muted">No hay órdenes pendientes en la lista de alistamiento.</td></tr>
+                    
+@endif
+
 
                     @foreach ($listaAlistamiento as $row)
+
                     @php
-                        $isLockedByMe = $row->locked_by_user_id && $row->locked_by_user_id == auth()->id();
-                        $isLockedByOther = $row->locked_by_user_id && $row->locked_by_user_id != auth()->id();
-                    @endphp
+$isLockedByMe = (!empty($row['locked_by_user_id']) && $row['locked_by_user_id'] == sesion('user_id'));
+                        $isLockedByOther = (!empty($row['locked_by_user_id']) && $row['locked_by_user_id'] != sesion('user_id'));
+@endphp
+
                     <tr>
                         <td class="ps-3">
                             <span class="badge bg-secondary px-3 py-2 fs-6">
                                 <i class="fa-solid fa-clock me-1"></i> Por Gestionar
                             </span>
                         </td>
-                        <td class="fw-bold text-primary fs-5">{{ $row->ticket_numero }}</td>
-                        <td>{{ $row->fecha_ingreso?->format('h:i A') }}</td>
+                        <td class="fw-bold text-primary fs-5">{{ $row['ticket_numero'] }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="fa-solid fa-location-dot text-warning me-1"></i> {{ $row['nombre_sede'] ?? 'Sede Principal' }}
+                            </span>
+                        </td>
+                        <td>{{ date('h:i A', strtotime($row['fecha_ingreso'])) }}</td>
                         <td>
                             <div class="fw-bold">
-                                {{ $row->paciente->nombres . ' ' . $row->paciente->apellidos }}
-                                {!! get_prioridad_badge($row->prioridad ?? 'NORMAL') !!}
+                                {{ $row['nombres'] . ' ' . $row['apellidos'] }}
+                                {!! get_prioridad_badge($row['prioridad'] ?? 'NORMAL') !!}
                             </div>
-                            <small class="text-muted">{{ $row->paciente->tipo_documento . ' ' . $row->paciente->numero_documento }}</small>
+                            <small class="text-muted">{{ $row['tipo_documento'] . ' ' . $row['numero_documento'] }}</small>
                         </td>
-                        <td><span class="badge bg-info text-dark">{{ $row->paciente->eps_nombre }}</span></td>
+                        <td><span class="badge bg-info text-dark">{{ $row['eps_nombre'] }}</span></td>
                         <td>
-                            @if ($isLockedByOther)
-                                <span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i> Bloqueado por: {{ $row->bloqueadoPor?->nombre_completo }}</span>
-                            @elseif ($isLockedByMe)
+                            
+@if ($isLockedByOther)
+
+                                <span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i> Bloqueado por: {{ $row['locked_by_nombre'] }}</span>
+                            
+@php
+elseif ($isLockedByMe):
+@endphp
+
                                 <span class="badge bg-warning text-dark"><i class="fa-solid fa-user-gear me-1"></i> En gestión por ti</span>
-                            @else
+                            
+@else
+
                                 <span class="badge bg-success"><i class="fa-solid fa-lock-open me-1"></i> Disponible</span>
-                            @endif
+                            
+@endif
+
                         </td>
                         <td class="text-end pe-3">
-                            @if ($isLockedByOther)
-                                <div class="d-flex justify-content-end gap-1">
-                                    <button class="btn btn-sm btn-secondary" disabled><i class="fa-solid fa-lock me-1"></i> Ocupado</button>
-                                    @if ($esAdmin)
-                                        <button class="btn btn-sm btn-outline-danger" title="Forzar Desbloqueo (Admin)" onclick="forzarDesbloqueoAlistamiento({{ $row->id }})">
-                                            <i class="fa-solid fa-key"></i>
-                                        </button>
-                                    @endif
-                                </div>
-                            @elseif ($isLockedByMe)
-                                <button class="btn btn-sm btn-warning fw-bold text-dark" onclick="gestionarAlistamiento({{ $row->id }})">
-                                    <i class="fa-solid fa-folder-open me-1"></i> Continuar
-                                </button>
-                            @else
-                                <button class="btn btn-sm btn-primary fw-bold" onclick="gestionarAlistamiento({{ $row->id }})">
-                                    <i class="fa-solid fa-boxes-packing me-1"></i> Gestionar Alistamiento
-                                </button>
-                            @endif
+                            <button type="button" class="btn btn-sm btn-success fw-bold text-white shadow-sm" onclick="imprimirYEnviarAEntrega({{ $row['id'] }}, '{{ $row['pdf_transcripcion_url'] ?? '' }}', '{{ $row['ticket_numero'] }}')">
+                                <i class="fa-solid fa-print me-1"></i> 🖨️ Imprimir & Enviar a Entrega
+                            </button>
                         </td>
                     </tr>
-                    @endforeach
+                    
+@endforeach
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Sección de Historial de Alistados Hoy & Reimpresión Inmediata -->
+<div class="card card-glass border-0 shadow-sm mt-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h5 class="fw-bold mb-0 text-dark">
+                <i class="fa-solid fa-print me-2 text-primary"></i> Órdenes Alistadas Hoy & Reimpresión de Orden Unificada
+            </h5>
+            <small class="text-muted">Si olvidaste imprimir o necesitas copias adicionales del tiquete u orden unificada, puedes reimprimirlos aquí en cualquier momento.</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm" style="max-width: 320px;">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" id="filtroAlistadosHoy" class="form-control" placeholder="Buscar por cédula, tiquete o nombre..." onkeyup="filtrarTablaAlistadosHoy()">
+            </div>
+            <span class="badge bg-primary fs-6" id="badge-total-alistados-hoy">{{ count($listaAlistadosHoy) }} Alistados</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tabla-alistados-hoy">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Tiquete</th>
+                        <th>Sede</th>
+                        <th>Paciente</th>
+                        <th>EPS</th>
+                        <th>Estado Actual</th>
+                        <th>Ventanilla Asignada</th>
+                        <th class="text-end pe-3">Reimpresión Directa</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-alistados-hoy">
+                    
+@if (empty($listaAlistadosHoy))
+
+                        <tr id="row-sin-alistados"><td colspan="7" class="text-center py-4 text-muted">Aún no se han alistado órdenes en el turno de hoy.</td></tr>
+                    
+@else
+
+                        @foreach ($listaAlistadosHoy as $rowAlist)
+
+                        <tr class="item-alistado-hoy">
+                            <td class="ps-3">
+                                <span class="fw-bold font-monospace text-primary fs-6">
+                                    <i class="fa-solid fa-receipt me-1"></i> {{ $rowAlist['ticket_numero'] }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fa-solid fa-location-dot text-warning me-1"></i> {{ $rowAlist['nombre_sede'] ?? 'Sede Principal' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ $rowAlist['nombres'] . ' ' . $rowAlist['apellidos'] }}</div>
+                                <small class="text-muted">{{ $rowAlist['tipo_documento'] . ' ' . $rowAlist['numero_documento'] }}</small>
+                            </td>
+                            <td><span class="badge bg-info text-dark">{{ $rowAlist['eps_nombre'] }}</span></td>
+                            <td>
+                                {!! get_estado_badge($rowAlist['estado_tramite']) !!}
+                            </td>
+                            <td>
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 fw-bold">
+                                    <i class="fa-solid fa-door-open me-1"></i> {{ $rowAlist['modulo_entrega_asignado'] ?? 'En Espera' }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-3">
+                                <div class="d-inline-flex gap-1">
+                                    
+@if (in_array($rowAlist['estado_tramite'], ['EN_ENTREGA', 'ALISTADO']))
+
+                                        <a href="{{ route('entrega.index') }}?busqueda={{ urlencode($rowAlist['ticket_numero']) }}" class="btn btn-sm btn-warning text-dark fw-bold shadow-sm" title="Ir a Ventanilla para captura de firma y cierre">
+                                            <i class="fa-solid fa-signature me-1"></i> Firmar
+                                        </a>
+                                    
+@endif
+
+                                    <a href="{{ route('alistamiento.orden_unificada', $rowAlist['id']) }}?auto_print=1" target="_blank" class="btn btn-sm btn-primary fw-bold shadow-sm" title="Reimprimir Orden Unificada + Tiquete">
+                                        <i class="fa-solid fa-print me-1"></i> 🖨️ Orden Unificada
+                                    </a>
+                                    <a href="{{ route('alistamiento.ticket', $rowAlist['id']) }}?auto_print=1" target="_blank" class="btn btn-sm btn-outline-secondary" title="Reimprimir sólo Tiquete de Alistamiento">
+                                        <i class="fa-solid fa-boxes-packing"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        
+@endforeach
+
+                    @endif
+
                 </tbody>
             </table>
         </div>
@@ -118,7 +232,8 @@
             </div>
             
             <form method="POST" action="{{ route('alistamiento.guardar') }}" enctype="multipart/form-data" id="formAlistamiento">
-                @csrf
+@csrf
+                <input type="hidden" name="action" value="guardar_alistamiento">
                 <input type="hidden" name="ingreso_id" id="modal_alistamiento_ingreso_id">
 
                 <div class="modal-body p-4">
@@ -204,20 +319,29 @@
                             <label class="form-label fw-semibold">Asignación de Ventanilla en Módulo de Entrega</label>
                             <select name="modulo_entrega_asignado" class="form-select fw-bold">
                                 <option value="AUTO" selected>-- ASIGNACIÓN AUTOMÁTICA EQUITATIVA (Recomendado) --</option>
-                                @foreach ($modulosActivos as $m)
-                                    <option value="{{ $m->nombre }}">{{ $m->nombre }} {{ $m->descripcion ? '('.$m->descripcion.')' : '' }}</option>
-                                @endforeach
+                                
+@foreach ($modulos_activos as $m)
+
+                                    <option value="{{ $m['nombre'] }}">{{ $m['nombre'] }} {{ !empty($m['descripcion']) ? '('.htmlspecialchars($m['descripcion']).')' : '' }}</option>
+                                
+@endforeach
+
                             </select>
                         </div>
 
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="liberarBloqueoAlistamiento()">Cancelar / Liberar</button>
-                    <button type="submit" class="btn btn-success fw-bold px-4" id="btn-submit-alistamiento">
-                        <i class="fa-solid fa-paper-plane me-1"></i> Enviar a Entrega & Facturación
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger fw-bold" onclick="devolverOrdenATranscripcion()">
+                        <i class="fa-solid fa-arrow-rotate-left me-1"></i> Devolver a Transcripción
                     </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="liberarBloqueoAlistamiento()">Cancelar / Liberar</button>
+                        <button type="submit" class="btn btn-success fw-bold px-4" id="btn-submit-alistamiento">
+                            <i class="fa-solid fa-paper-plane me-1"></i> Enviar a Entrega & Facturación
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -274,17 +398,6 @@
 </div>
 
 <script>
-const LOCK_URL_TEMPLATE = @json(route('api.ingresos.lock', ['ingreso' => '__ID__']));
-const DETALLE_URL_TEMPLATE = @json(route('alistamiento.detalle', ['ingreso' => '__ID__']));
-const LISTA_URL = @json(route('alistamiento.lista'));
-
-function lockUrl(id) {
-    return LOCK_URL_TEMPLATE.replace('__ID__', id);
-}
-function headersLock() {
-    return { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' };
-}
-
 let currentIngresoIdLock = null;
 let currentPdfTranscripcionUrl = '';
 let currentTranscripcionText = '';
@@ -292,8 +405,8 @@ let currentAlistamientoText = '';
 let originalAlistamientoArrayBuffer = null;
 let heartbeatInterval = null;
 let autoRefreshInterval = null;
-const currentUserId = {{ auth()->id() }};
-const esAdmin = {{ $esAdmin ? 'true' : 'false' }};
+const currentUserId = {!! json_encode(sesion('user_id')) !!};
+const esAdmin = {!! json_encode($esAdmin) !!};
 
 let visorAlistamientoUrl = '';
 let visorAlistamientoType = 'pdf';
@@ -429,7 +542,11 @@ function aplicarTransformImagenAlistamiento() {
 }
 
 function gestionarAlistamiento(id) {
-    fetch(lockUrl(id), { method: 'POST', headers: headersLock() })
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('action', 'lock');
+
+    fetch('{{ route('api.lock_record') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': SISPAM_CSRF }, body: formData })
         .then(res => res.json())
         .then(res => {
             if (res.status === 'ok') {
@@ -445,21 +562,30 @@ function gestionarAlistamiento(id) {
 }
 
 function forzarDesbloqueoAlistamiento(id) {
-    if (!confirm("¿Está seguro de forzar el desbloqueo de esta orden como Administrador?")) return;
+    modalConfirm("¿Está seguro de forzar el desbloqueo de esta orden como Administrador?", () => {
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('action', 'unlock');
+        formData.append('force', '1');
 
-    fetch(lockUrl(id) + '?force=1', { method: 'DELETE', headers: headersLock() })
-        .then(res => res.json())
-        .then(res => {
-            alert(res.message);
-            refrescarListaTabla();
-        });
+        fetch('{{ route('api.lock_record') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': SISPAM_CSRF }, body: formData })
+            .then(res => res.json())
+            .then(res => {
+                modalAlert(res.message, res.status === 'ok' ? 'success' : 'info', 'Desbloqueo de Orden', () => {
+                    refrescarListaTabla();
+                });
+            });
+    }, null, 'Forzar Desbloqueo', 'Sí, Desbloquear', 'Cancelar');
 }
 
 function iniciarHeartbeat(id) {
     detenerHeartbeat();
     heartbeatInterval = setInterval(() => {
         if (currentIngresoIdLock === id) {
-            fetch(lockUrl(id), { method: 'POST', headers: headersLock() });
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('action', 'lock');
+            fetch('{{ route('api.lock_record') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': SISPAM_CSRF }, body: formData });
         }
     }, 25000);
 }
@@ -478,7 +604,7 @@ function cargarDatosModal(id) {
     document.getElementById('alistamiento-comparison-status').innerHTML = '';
     document.getElementById('modal_faltantes_alistamiento').value = '';
 
-    fetch(DETALLE_URL_TEMPLATE.replace('__ID__', id))
+    fetch(`{{ route('alistamiento.index') }}?ajax_get_detail=1&id=${id}`)
         .then(res => res.json())
         .then(data => {
             document.getElementById('modal_alistamiento_paciente_nombre').innerText = (data.nombres || '') + ' ' + (data.apellidos || '');
@@ -488,20 +614,44 @@ function cargarDatosModal(id) {
             currentPdfTranscripcionUrl = data.pdf_transcripcion_url || '';
             const containerPdf = document.getElementById('modal_alistamiento_pdf_transcrito_container');
 
+            let htmlDocs = '';
             if (currentPdfTranscripcionUrl) {
-                containerPdf.innerHTML = `
-                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold" onclick="abrirVisorAlistamiento('${currentPdfTranscripcionUrl}', 'Fórmula Transcrita')">
-                        <i class="fa-solid fa-file-pdf me-1"></i> Ver Orden Transcrita PDF
+                htmlDocs += `
+                    <button type="button" class="btn btn-sm btn-outline-danger fw-bold me-1 mb-1 shadow-sm" onclick="abrirVisorAlistamiento('${currentPdfTranscripcionUrl}', 'Fórmula Transcrita')">
+                        <i class="fa-solid fa-file-pdf me-1"></i> Ver Orden Transcrita
                     </button>
                 `;
-                // Extraer texto del PDF de transcripción en segundo plano para comparación
                 extraerTextoPdfUrl(currentPdfTranscripcionUrl).then(txt => {
                     currentTranscripcionText = txt;
                 });
             } else {
-                containerPdf.innerHTML = '<span class="text-muted small">Sin PDF de transcripción previo</span>';
                 currentTranscripcionText = '';
             }
+
+            // Mostrar soportes originales escaneados en Ingreso (Fórmula médica, MIPRES, etc.)
+            if (data.documentos && data.documentos.length > 0) {
+                data.documentos.forEach(d => {
+                    const tipo = (d.tipo_documento || 'DOCUMENTO').toUpperCase();
+                    let btnClass = 'btn-outline-primary';
+                    let icon = 'fa-file-lines';
+                    let lbl = d.tipo_documento || 'Documento';
+                    if (tipo.includes('MIPRES')) { btnClass = 'btn-outline-purple'; icon = 'fa-file-waveform'; lbl = 'MIPRES'; }
+                    else if (tipo.includes('ORDEN') || tipo.includes('FORMULA') || tipo.includes('MEDICA')) { btnClass = 'btn-outline-danger'; icon = 'fa-file-medical'; lbl = 'Fórmula Escaneada'; }
+                    else if (tipo.includes('CEDULA')) { btnClass = 'btn-outline-info text-dark'; icon = 'fa-id-card'; lbl = 'Cédula'; }
+                    else if (tipo.includes('AUTORIZACION')) { btnClass = 'btn-outline-warning text-dark'; icon = 'fa-file-shield'; lbl = 'Autorización'; }
+                    
+                    htmlDocs += `
+                        <button type="button" class="btn btn-sm ${btnClass} fw-bold me-1 mb-1 shadow-sm" onclick="abrirVisorAlistamiento('${d.ruta_archivo}', '${escapeHtml(lbl)}')">
+                            <i class="fa-solid ${icon} me-1"></i> ${escapeHtml(lbl)}
+                        </button>
+                    `;
+                });
+            }
+
+            if (!htmlDocs) {
+                htmlDocs = '<span class="text-muted small"><i class="fa-solid fa-folder-open me-1"></i> Sin documentos adjuntos registrados</span>';
+            }
+            containerPdf.innerHTML = htmlDocs;
 
             const modalEl = document.getElementById('modalGestionarAlistamiento');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -824,7 +974,11 @@ function liberarBloqueoAlistamiento() {
         const idToUnlock = currentIngresoIdLock;
         currentIngresoIdLock = null;
 
-        fetch(lockUrl(idToUnlock), { method: 'DELETE', headers: headersLock() })
+        const formData = new FormData();
+        formData.append('id', idToUnlock);
+        formData.append('action', 'unlock');
+
+        fetch('{{ route('api.lock_record') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': SISPAM_CSRF }, body: formData })
             .then(() => refrescarListaTabla())
             .catch(() => refrescarListaTabla());
     } else {
@@ -842,11 +996,14 @@ function iniciarAutoRefresco() {
 }
 
 function refrescarListaTabla() {
-    fetch(LISTA_URL)
+    fetch('{{ route('alistamiento.index') }}?ajax_get_list=1')
         .then(res => res.json())
         .then(res => {
             if (res.status === 'ok') {
                 renderizarTablaAlistamiento(res.data, res.user_id, res.es_admin);
+                if (res.alistados_hoy) {
+                    renderizarTablaAlistadosHoy(res.alistados_hoy);
+                }
             }
         })
         .catch(err => console.error("Error al refrescar lista de alistamiento:", err));
@@ -860,7 +1017,7 @@ function renderizarTablaAlistamiento(lista, currentUserId, esAdmin) {
     if (badgeTotal) badgeTotal.textContent = `${lista.length} En Cola`;
 
     if (!lista || lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No hay órdenes pendientes en la lista de alistamiento.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No hay órdenes pendientes en la lista de alistamiento.</td></tr>';
         return;
     }
 
@@ -870,34 +1027,34 @@ function renderizarTablaAlistamiento(lista, currentUserId, esAdmin) {
         const isLockedByOther = row.locked_by_user_id && row.locked_by_user_id != currentUserId;
         
         let lockBadge = '';
-        let btnAccion = '';
-
         if (isLockedByOther) {
             lockBadge = `<span class="badge bg-danger"><i class="fa-solid fa-lock me-1"></i> Bloqueado por: ${escapeHtml(row.locked_by_nombre || 'Otro usuario')}</span>`;
-            let btnAdmin = esAdmin ? `<button class="btn btn-sm btn-outline-danger ms-1" title="Forzar Desbloqueo (Admin)" onclick="forzarDesbloqueoAlistamiento(${row.id})"><i class="fa-solid fa-key"></i></button>` : '';
-            btnAccion = `<div class="d-flex justify-content-end gap-1"><button class="btn btn-sm btn-secondary" disabled><i class="fa-solid fa-lock me-1"></i> Ocupado</button>${btnAdmin}</div>`;
         } else if (isLockedByMe) {
             lockBadge = `<span class="badge bg-warning text-dark"><i class="fa-solid fa-user-gear me-1"></i> En gestión por ti</span>`;
-            btnAccion = `<button class="btn btn-sm btn-warning fw-bold text-dark" onclick="gestionarAlistamiento(${row.id})">
-                <i class="fa-solid fa-folder-open me-1"></i> Continuar
-            </button>`;
         } else {
             lockBadge = `<span class="badge bg-success"><i class="fa-solid fa-lock-open me-1"></i> Disponible</span>`;
-            btnAccion = `<button class="btn btn-sm btn-primary fw-bold" onclick="gestionarAlistamiento(${row.id})">
-                <i class="fa-solid fa-boxes-packing me-1"></i> Gestionar Alistamiento
-            </button>`;
         }
+
+        const pdfUrl = escapeHtml(row.pdf_transcripcion_url || '');
+        const btnAccion = `<button type="button" class="btn btn-sm btn-success fw-bold text-white shadow-sm" onclick="imprimirYEnviarAEntrega(${row.id}, '${pdfUrl}', '${escapeHtml(row.ticket_numero)}')">
+            <i class="fa-solid fa-print me-1"></i> 🖨️ Imprimir & Enviar a Entrega
+        </button>`;
 
         let prioBadge = getPrioridadBadge(row.prioridad);
 
         html += `
-        <tr>
+        <tr id="fila-alistamiento-${row.id}">
             <td class="ps-3">
                 <span class="badge bg-secondary px-3 py-2 fs-6">
                     <i class="fa-solid fa-clock me-1"></i> Por Gestionar
                 </span>
             </td>
             <td class="fw-bold text-primary fs-5">${escapeHtml(row.ticket_numero)}</td>
+            <td>
+                <span class="badge bg-light text-dark border">
+                    <i class="fa-solid fa-location-dot text-warning me-1"></i> ${escapeHtml(row.nombre_sede || 'Sede Principal')}
+                </span>
+            </td>
             <td>${formatHora(row.fecha_ingreso)}</td>
             <td>
                 <div class="fw-bold">${escapeHtml(row.nombres + ' ' + row.apellidos)} ${prioBadge}</div>
@@ -910,6 +1067,48 @@ function renderizarTablaAlistamiento(lista, currentUserId, esAdmin) {
     });
 
     tbody.innerHTML = html;
+}
+
+function imprimirYEnviarAEntrega(id, pdfUrl, ticketNumero) {
+    modalConfirm(
+        `¿Desea enviar a imprimir la orden transcrita y trasladar el tiquete <strong>${escapeHtml(ticketNumero)}</strong> al Módulo de Entrega & Facturación?`,
+        () => {
+            // 1. Abrir vista de impresión unificada (Tiquete de Turno + Orden Transcrita)
+            const printUrl = `{{ url('alistamiento') }}/${id}/orden-unificada?auto_print=1`;
+            window.open(printUrl, '_blank');
+
+            // 2. Remover visualmente de inmediato la fila de la grilla
+            const fila = document.getElementById(`fila-alistamiento-${id}`);
+            if (fila) {
+                fila.style.transition = 'opacity 0.3s ease';
+                fila.style.opacity = '0';
+                setTimeout(() => fila.remove(), 300);
+            }
+
+            // 3. Marcar como gestionado y mover a Entrega & Facturación vía AJAX
+            const formData = new FormData();
+            formData.append('action', 'marcar_gestionado');
+            formData.append('ingreso_id', id);
+            formData.append('ajax', '1');
+
+            fetch('{{ route('alistamiento.index') }}', {
+                method: 'POST', headers: { 'X-CSRF-TOKEN': SISPAM_CSRF },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                refrescarListaTabla();
+            })
+            .catch(err => {
+                console.error("Error al enviar a entrega:", err);
+                refrescarListaTabla();
+            });
+        },
+        null,
+        'Confirmar Impresión y Traslado',
+        'Sí, Imprimir y Trasladar',
+        'Cancelar'
+    );
 }
 
 function getPrioridadBadge(prioridad) {
@@ -934,6 +1133,134 @@ function formatHora(fechaStr) {
     if (isNaN(d.getTime())) return fechaStr;
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 }
-</script>
 
+function filtrarTablaAlistadosHoy() {
+    const input = document.getElementById('filtroAlistadosHoy');
+    const filter = (input ? input.value : '').toLowerCase().trim();
+    const rows = document.querySelectorAll('.item-alistado-hoy');
+    let visibleCount = 0;
+    rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        if (text.includes(filter)) {
+            r.style.display = '';
+            visibleCount++;
+        } else {
+            r.style.display = 'none';
+        }
+    });
+    const badge = document.getElementById('badge-total-alistados-hoy');
+    if (badge) badge.textContent = `${visibleCount} Alistados`;
+}
+
+function getEstadoBadgeJs(estado) {
+    switch (estado) {
+        case 'ESPERA_ENTREGA':
+        case 'ALISTADO':
+        case 'GESTIONADO':
+            return '<span class="badge bg-info text-dark"><i class="fa-solid fa-box-open me-1"></i> Alistado / En Espera Entrega</span>';
+        case 'EN_ENTREGA':
+            return '<span class="badge bg-warning text-dark"><i class="fa-solid fa-person-walking-arrow-right me-1"></i> Llamado a Ventanilla</span>';
+        case 'ENTREGADO':
+            return '<span class="badge bg-dark"><i class="fa-solid fa-square-check me-1"></i> Entregado</span>';
+        case 'VERIFICADO':
+            return '<span class="badge bg-success"><i class="fa-solid fa-user-check me-1"></i> Verificado (Alistamiento)</span>';
+        default:
+            return `<span class="badge bg-light text-dark border">${escapeHtml(estado || 'Alistado')}</span>`;
+    }
+}
+
+function renderizarTablaAlistadosHoy(lista) {
+    const tbody = document.getElementById('tbody-alistados-hoy');
+    const badgeTotal = document.getElementById('badge-total-alistados-hoy');
+    if (!tbody) return;
+
+    if (!lista || lista.length === 0) {
+        tbody.innerHTML = '<tr id="row-sin-alistados"><td colspan="7" class="text-center py-4 text-muted">Aún no se han alistado órdenes en el turno de hoy.</td></tr>';
+        if (badgeTotal) badgeTotal.textContent = '0 Alistados';
+        return;
+    }
+
+    if (badgeTotal) badgeTotal.textContent = `${lista.length} Alistados`;
+
+    let html = '';
+    lista.forEach(rowAlist => {
+        const nomSede = escapeHtml(rowAlist.nombre_sede || 'Sede Principal');
+        const moduloTxt = escapeHtml(rowAlist.modulo_entrega_asignado || 'En Espera');
+        const estadoBadge = getEstadoBadgeJs(rowAlist.estado_tramite);
+
+        html += `
+        <tr class="item-alistado-hoy">
+            <td class="ps-3">
+                <span class="fw-bold font-monospace text-primary fs-6">
+                    <i class="fa-solid fa-receipt me-1"></i> ${escapeHtml(rowAlist.ticket_numero)}
+                </span>
+            </td>
+            <td>
+                <span class="badge bg-light text-dark border">
+                    <i class="fa-solid fa-location-dot text-warning me-1"></i> ${nomSede}
+                </span>
+            </td>
+            <td>
+                <div class="fw-bold text-dark">${escapeHtml(rowAlist.nombres + ' ' + rowAlist.apellidos)}</div>
+                <small class="text-muted">${escapeHtml(rowAlist.tipo_documento + ' ' + rowAlist.numero_documento)}</small>
+            </td>
+            <td><span class="badge bg-info text-dark">${escapeHtml(rowAlist.eps_nombre || '')}</span></td>
+            <td>${estadoBadge}</td>
+            <td>
+                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 fw-bold">
+                    <i class="fa-solid fa-door-open me-1"></i> ${moduloTxt}
+                </span>
+            </td>
+            <td class="text-end pe-3">
+                <div class="d-inline-flex gap-1">
+                    <a href="{{ url('alistamiento') }}/${rowAlist.id}/orden-unificada?auto_print=1" target="_blank" class="btn btn-sm btn-primary fw-bold shadow-sm" title="Reimprimir Orden Unificada + Tiquete">
+                        <i class="fa-solid fa-print me-1"></i> 🖨️ Orden Unificada
+                    </a>
+                    <a href="{{ url('alistamiento') }}/${rowAlist.id}/ticket?auto_print=1" target="_blank" class="btn btn-sm btn-outline-secondary" title="Reimprimir sólo Tiquete de Alistamiento">
+                        <i class="fa-solid fa-boxes-packing"></i>
+                    </a>
+                </div>
+            </td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+    filtrarTablaAlistadosHoy();
+}
+
+function devolverOrdenATranscripcion() {
+    const id = document.getElementById('modal_alistamiento_ingreso_id').value;
+    if (!id) return;
+    
+    mostrarConfirmacionModal(
+        'Devolver a Transcripción',
+        `¿Está seguro de que desea devolver la orden #${id} a la lista de Transcripción para que le adjunten los soportes requeridos?`,
+        () => {
+            const formData = new FormData();
+            formData.append('action', 'devolver_transcripcion');
+            formData.append('ingreso_id', id);
+            formData.append('ajax', '1');
+            
+            fetch('{{ route('alistamiento.index') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': SISPAM_CSRF }, body: formData })
+                .then(res => res.json())
+                .then(res => {
+                    const modalEl = document.getElementById('modalGestionarAlistamiento');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    liberarBloqueoAlistamiento();
+                    refrescarListaAlistamiento();
+                    mostrarToastNotificacion(res.message, res.status === 'ok' ? 'success' : 'danger');
+                })
+                .catch(err => {
+                    console.error("Error al devolver orden:", err);
+                    alert("Error al devolver la orden a Transcripción.");
+                });
+        },
+        null,
+        'Devolver Orden',
+        'Sí, Devolver a Transcripción',
+        'Cancelar'
+    );
+}
+</script>
 @endsection

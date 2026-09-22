@@ -15,7 +15,7 @@
         'Documento: '.$paciente->tipo_documento.' '.$paciente->numero_documento,
         'EPS: '.$paciente->eps_nombre,
         'Orientador: '.$ingreso->orientador?->nombre_completo,
-        $ingreso->contiene_mipres === 'SI' ? '*** MEDICAMENTO DE ALTO COSTO ***' : null,
+        $ingreso->es_alto_costo ? '*** MEDICAMENTO DE ALTO COSTO ***' : null,
         '--------------------------------',
         $config->pie_tiquete,
         "SISPAM - Gestion Farmaceutica\n\n\n\n",
@@ -115,7 +115,7 @@
         </div>
     @endif
 
-    @if ($ingreso->contiene_mipres === 'SI')
+    @if ($ingreso->es_alto_costo)
         <div style="border: 2px solid #000; padding: 6px; text-align: center; font-weight: bold; margin: 10px 0;">
             ⚠ MEDICAMENTO DE ALTO COSTO ⚠
         </div>

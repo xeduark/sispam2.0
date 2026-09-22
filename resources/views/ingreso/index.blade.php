@@ -7,7 +7,9 @@
 <!-- Carga de librerías para Escáner Profesional: OpenCV.js, jsPDF y scanner_doc.js -->
 <script async src="https://cdn.jsdelivr.net/npm/@techstark/opencv-js@4.9.0-release.2/opencv.js" onload="window.dispatchEvent(new Event('opencv-ready'))"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="{{ asset('assets/js/scanner_doc.js') }}"></script>
+<script src="{{ asset('assets/js/scanner_doc.js') }}?v={{ filemtime(public_path('assets/js/scanner_doc.js')) }}"></script>
+<script src="{{ asset('assets/js/vendor/zxing.min.js') }}"></script>
+<script src="{{ asset('assets/js/ingreso_escaner.js') }}?v={{ filemtime(public_path('assets/js/ingreso_escaner.js')) }}"></script>
 
 <style>
     /* Estilos personalizados para optimizar la UX del formulario en pasos */
@@ -116,8 +118,8 @@
                                 </div>
                                 <div class="col-12">
                                     <div class="form-check form-switch bg-white border border-danger border-opacity-25 rounded-3 p-3 ps-5">
-                                        <input class="form-check-input" type="checkbox" role="switch" name="medicamento_alto_costo" id="medicamento_alto_costo" value="1">
-                                        <label class="form-check-label fw-bold text-danger" for="medicamento_alto_costo">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="es_alto_costo" id="es_alto_costo" value="1">
+                                        <label class="form-check-label fw-bold text-danger" for="es_alto_costo">
                                             <i class="fa-solid fa-capsules me-1"></i> Medicamento de Alto Costo (Imprimir en Tiquete)
                                         </label>
                                     </div>
@@ -581,118 +583,10 @@
 </div>
 
 <!-- MODAL DE NOTIFICACIONES BOOTSTRAP PERSONALIZADO -->
-<div class="modal fade" id="modalNotificacionEscaner" tabindex="-1" aria-hidden="true" style="z-index: 1090;">
-    <div class="modal-dialog modal-dialog-centered" style="z-index: 1095;">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header text-white" id="modalNotifHeader">
-                <h5 class="modal-title fw-bold" id="modalNotifTitle">
-                    <i class="fa-solid fa-bell me-2"></i> Notificación
-                </h5>
-                <button type="button" class="btn-close btn-close-white" onclick="cerrarNotificacionModal()" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4 text-center">
-                <div id="modalNotifIcon" class="display-3 mb-3"></div>
-                <div id="modalNotifMessage" class="fs-5 fw-semibold dark:text-slate-100"></div>
-            </div>
-            <div class="modal-footer justify-content-center border-0 pt-0">
-                <button type="button" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="cerrarNotificacionModal()" data-bs-dismiss="modal">
-                    Entendido / Aceptar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- MODAL ESCÁNER DE DOCUMENTOS PROFESIONAL -->
-<div class="modal fade" id="modalEscanerDocPro" tabindex="-1" aria-hidden="true" style="z-index: 1055;">
-    <div class="modal-dialog scanner-modal-dialog">
-        <div class="modal-content scanner-modal-content">
-            <div class="scanner-modal-header d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-camera-retro text-info fs-4"></i>
-                    <div>
-                        <h5 class="modal-title fw-bold mb-0 text-white">Escáner Profesional de Documentos</h5>
-                        <small class="text-muted">Captura 1 o más páginas seguidas para el soporte seleccionado.</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" onclick="cerrarEscanerPro()"></button>
-            </div>
-
-            <div class="scanner-modal-body">
-                <div id="camera-https-alert" class="alert alert-warning alert-dismissible fade show d-none small mb-2">
-                    <i class="fa-solid fa-lock me-1"></i> <strong>Conexión Segura Requerida:</strong> Para usar la cámara en vivo, ingrese por HTTPS.
-                </div>
-
-                <div class="bg-primary bg-opacity-25 border border-info rounded p-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="fa-solid fa-file-signature text-info fs-5"></i>
-                        <span class="text-white fw-bold">Documento a Escanear:</span>
-                    </div>
-                    <div>
-                        <select id="scanner-target-category" class="form-select form-select-sm fw-bold bg-dark text-info border-info" style="min-width: 220px;">
-                            <option value="CEDULA">1. Cédula / Doc. Identidad</option>
-                            <option value="ORDEN_MEDICA" selected>2. Fórmula / Orden Médica</option>
-                            <option value="AUTORIZACION">3. Autorización de Servicios</option>
-                            <option value="HISTORIA_CLINICA">4. Historia Clínica / Anexo</option>
-                            <option value="OTRO">5. Otro Documento</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 bg-dark p-2 rounded">
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn-sm btn-primary fw-bold" id="btn-start-cam" onclick="iniciarCamaraEscaner()">
-                            <i class="fa-solid fa-video me-1"></i> Iniciar Cámara
-                        </button>
-                        <button type="button" class="btn btn-sm btn-warning fw-bold text-dark d-none" id="btn-snap-cam" onclick="capturarFotoEscaner()">
-                            <i class="fa-solid fa-camera me-1"></i> Tomar Captura
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-warning fw-bold" id="btn-reset-cam" onclick="reiniciarCamaraEscaner()">
-                            <i class="fa-solid fa-rotate-right me-1"></i> Reiniciar Cámara
-                        </button>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="btn btn-sm btn-outline-info fw-bold mb-0">
-                            <i class="fa-solid fa-image me-1"></i> Galería / Archivo
-                            <input type="file" id="input-foto-nativa" accept="image/*,application/pdf" class="d-none" onchange="cargarFotoNativaEscaner(event)">
-                        </label>
-                    </div>
-                </div>
-
-                <div id="paso-captura-container">
-                    <div class="scanner-canvas-wrapper shadow-lg position-relative">
-                        <video id="webcam-video" autoplay playsinline muted class="w-100 h-100"></video>
-                        <canvas id="scanner-canvas-overlay" class="d-none position-absolute top-0 start-0"></canvas>
-                    </div>
-                </div>
-
-                <div id="paso-procesado-container" class="d-none">
-                    <div class="row g-3">
-                        <div class="col-md-9">
-                            <canvas id="canvas-processed" class="img-fluid rounded shadow"></canvas>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="filter-btn active" id="f-magic" onclick="aplicarFiltroEscaner('magic')">Magic Color</label>
-                            <label class="filter-btn" id="f-grayscale" onclick="aplicarFiltroEscaner('grayscale')">Grises</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <div class="pages-thumbnail-strip" id="strip-miniaturas"></div>
-                </div>
-            </div>
-
-            <div class="scanner-modal-footer">
-                <button type="button" class="btn btn-outline-light btn-sm" onclick="cerrarEscanerPro()">Cancelar</button>
-                <button type="button" class="btn btn-success fw-bold shadow" id="btn-finalizar-pdf" onclick="finalizarYAdjuntarPDF()">Finalizar</button>
-            </div>
-        </div>
-    </div>
-</div>
+@include('ingreso.partials.escaner_modales')
 
 <script>
-let scannerPro = null;
 let currentStep = 1;
 const totalSteps = 6;
 
@@ -932,65 +826,6 @@ function actualizarProgresoInterfaz() {
     }
 }
 
-function evaluarVisualizacionSoportes() {
-    const select = document.getElementById('select_persona_reclama');
-    const container = document.getElementById('seccion_soportes_container');
-    const infoBox = document.getElementById('info_requisitos_reclamacion');
-    const lblSub = document.getElementById('lbl_requisito_soportes_sub');
-    const contenedorDocs = document.getElementById('contenedor-documentos');
-
-    if (!select || !container || !contenedorDocs) return;
-    const val = select.value;
-
-    if (!val) {
-        container.classList.add('d-none');
-        infoBox.classList.add('d-none');
-        return;
-    }
-
-    container.classList.remove('d-none');
-    infoBox.classList.remove('d-none');
-
-    if (val === 'PACIENTE_DIRECTO') {
-        infoBox.innerHTML = `<strong>Reclamación Directa:</strong> Exige Cédula y Fórmula Médica.`;
-        lblSub.innerText = `Requisito Obligatorio (2 Soportes)`;
-        generarFilasSoportes(['CEDULA', 'ORDEN_MEDICA']);
-    } else {
-        infoBox.innerHTML = `<strong>Entrega a Terceros:</strong> Exige Cédula, Fórmula y Autorización.`;
-        lblSub.innerText = `Requisito Obligatorio (3 Soportes)`;
-        generarFilasSoportes(['CEDULA', 'ORDEN_MEDICA', 'AUTORIZACION']);
-    }
-}
-
-function generarFilasSoportes(tiposRequeridos) {
-    const contenedorDocs = document.getElementById('contenedor-documentos');
-    contenedorDocs.innerHTML = '';
-
-    tiposRequeridos.forEach((tipoTag, index) => {
-        const divRow = document.createElement('div');
-        divRow.className = 'card border-primary border-1 mb-2 item-documento bg-white dark:bg-slate-800 dark:text-slate-100 p-2 shadow-sm';
-        divRow.innerHTML = `
-            <div class="row align-items-center g-2">
-                <div class="col-md-4">
-                    <select name="doc_tipo_categoria[]" class="form-select form-select-sm fw-bold border-primary select-doc-cat">
-                        <option value="CEDULA" ${tipoTag === 'CEDULA' ? 'selected' : ''}>Cédula / Doc. Identidad *</option>
-                        <option value="ORDEN_MEDICA" ${tipoTag === 'ORDEN_MEDICA' ? 'selected' : ''}>Fórmula / Orden Médica *</option>
-                        <option value="AUTORIZACION" ${tipoTag === 'AUTORIZACION' ? 'selected' : ''}>Autorización / Doc. Tercero *</option>
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <input type="file" name="doc_archivos[]" class="form-control form-control-sm input-doc-file" accept=".pdf,.jpg,.jpeg,.png">
-                    <div class="status-doc-adjunto mt-1"></div>
-                </div>
-                <div class="col-md-3 text-end">
-                    <button type="button" class="btn btn-sm btn-success w-100" onclick="abrirEscanerProModal('${tipoTag}')">Escanear (Pro)</button>
-                </div>
-            </div>
-        `;
-        contenedorDocs.appendChild(divRow);
-    });
-}
-
 function mostrarNotificacionModal(titulo, mensajeHtml, tipo = 'success') {
     const modalEl = document.getElementById('modalNotificacionEscaner');
     document.getElementById('modalNotifTitle').innerText = titulo;
@@ -1023,28 +858,5 @@ function autocompletarFormulario(data) {
     });
 }
 
-function agregarFilaDoc() {
-    const container = document.getElementById('contenedor-documentos');
-    const div = document.createElement('div');
-    div.className = 'card border-secondary border-1 mb-2 item-documento bg-white dark:bg-slate-800 dark:text-slate-100 p-2 shadow-sm';
-    div.innerHTML = `
-        <div class="row align-items-center g-2">
-            <div class="col-md-4">
-                <select name="doc_tipo_categoria[]" class="form-select form-select-sm select-doc-cat">
-                    <option value="AUTORIZACION" selected>Autorización de Servicios</option>
-                    <option value="HISTORIA_CLINICA">Historia Clínica / Anexo</option>
-                    <option value="OTRO">Otro Documento</option>
-                </select>
-            </div>
-            <div class="col-md-5">
-                <input type="file" name="doc_archivos[]" class="form-control form-control-sm input-doc-file" accept=".pdf,.jpg,.jpeg,.png">
-            </div>
-            <div class="col-md-3 text-end">
-                <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('.item-documento').remove()">Eliminar</button>
-            </div>
-        </div>
-    `;
-    container.appendChild(div);
-}
 </script>
 @endsection

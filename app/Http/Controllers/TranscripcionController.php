@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Ingreso;
-use App\Services\IngresoService;
+use App\Services\FlujoIngresoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,61 +10,75 @@ use Illuminate\View\View;
 
 class TranscripcionController extends Controller
 {
-    public function index(IngresoService $ingresos): View
+    public function index(Request $request, FlujoIngresoService $flujo): View|JsonResponse
     {
+        $esAdmin = auth()->user()->esAdministrador();
+
+        // Lista de trabajo en JSON para el autorefresco silencioso de la tabla
+        if ($request->has('ajax_get_list')) {
+            return response()->json([
+                'status' => 'ok',
+                'user_id' => auth()->id(),
+                'es_admin' => $esAdmin,
+                'data' => $flujo->getListaTranscripcion(),
+            ]);
+        }
+
+        if ($request->filled('ajax_get_detail') && $request->filled('id')) {
+            return response()->json($flujo->getById((int) $request->query('id')) ?: []);
+        }
+
+        if ($request->has('ajax_get_historial')) {
+            $pacienteId = (int) $request->query('paciente_id', 0);
+            $numeroDocumento = trim((string) $request->query('numero_documento', ''));
+
+            if ((int) $request->query('ingreso_id', 0) > 0 && ($ingreso = $flujo->getById((int) $request->query('ingreso_id')))) {
+                $pacienteId = (int) ($ingreso['paciente_id'] ?? 0);
+                $numeroDocumento = $numeroDocumento ?: trim($ingreso['numero_documento'] ?? '');
+            }
+
+            return response()->json([
+                'status' => 'ok',
+                'paciente_id' => $pacienteId,
+                'numero_documento' => $numeroDocumento,
+                'data' => $flujo->getHistorialPacienteByDocumentoOrPacienteId($pacienteId, $numeroDocumento),
+            ]);
+        }
+
+        $listaTrabajo = $flujo->getListaTranscripcion();
+
         return view('transcripcion.index', [
-            'listaTrabajo' => $ingresos->listaTranscripcion(),
-            'esAdmin' => auth()->user()->esAdministrador(),
+            'esAdmin' => $esAdmin,
+            'mensaje' => session('success', ''),
+            'error' => session('error', ''),
+            'listaTrabajo' => $listaTrabajo,
+            'totalCola' => count($listaTrabajo),
+            'totalPrioritarios' => count(array_filter($listaTrabajo, fn ($r) => ($r['prioridad'] ?? 'NORMAL') !== 'NORMAL')),
+            'totalEnGestion' => count(array_filter($listaTrabajo, fn ($r) => ! empty($r['locked_by_user_id']))),
         ]);
     }
 
-    /** Polling de autorefresco de la tabla (antes ?ajax_get_list=1 en la misma página). */
-    public function lista(IngresoService $ingresos): JsonResponse
-    {
-        return response()->json([
-            'status' => 'ok',
-            'user_id' => auth()->id(),
-            'es_admin' => auth()->user()->esAdministrador(),
-            'data' => $ingresos->listaTranscripcion()->map(fn (Ingreso $i) => [
-                'id' => $i->id,
-                'ticket_numero' => $i->ticket_numero,
-                'fecha_ingreso' => $i->fecha_ingreso?->format('Y-m-d H:i:s'),
-                'prioridad' => $i->prioridad,
-                'estado_tramite' => $i->estado_tramite,
-                'locked_by_user_id' => $i->locked_by_user_id,
-                'locked_by_nombre' => $i->bloqueadoPor?->nombre_completo,
-                'tipo_documento' => $i->paciente->tipo_documento,
-                'numero_documento' => $i->paciente->numero_documento,
-                'nombres' => $i->paciente->nombres,
-                'apellidos' => $i->paciente->apellidos,
-                'eps_nombre' => $i->paciente->eps_nombre,
-            ]),
-        ]);
-    }
-
-    /** Detalle para el modal de gestión (antes ?ajax_get_detail=1 en la misma página). */
-    public function detalle(Ingreso $ingreso): JsonResponse
-    {
-        $ingreso->load('paciente', 'orientador', 'documentos');
-
-        return response()->json([
-            ...$ingreso->paciente->only(['tipo_documento', 'numero_documento', 'nombres', 'apellidos', 'eps_nombre']),
-            ...$ingreso->only(['id', 'ticket_numero', 'estado_tramite', 'prioridad']),
-            'orientador_nombre' => $ingreso->orientador?->nombre_completo,
-            'documentos' => $ingreso->documentos,
-        ]);
-    }
-
-    public function guardarTranscripcion(Request $request, IngresoService $ingresos): RedirectResponse
+    public function guardarTranscripcion(Request $request, FlujoIngresoService $flujo): RedirectResponse
     {
         $datos = $request->validate([
-            'ingreso_id' => ['required', 'exists:ingresos,id'],
-            'pdf_transcripcion' => ['nullable', 'file', 'mimes:pdf', 'max:25600'],
+            'ingreso_id' => ['required', 'integer'],
+            'contiene_mipres' => ['nullable', 'in:SI,NO'],
+            'pdf_transcripcion' => ['required', 'array', 'min:1'],
+            'pdf_transcripcion.*' => ['file', 'mimes:pdf', 'max:25600'],
+        ], [
+            'pdf_transcripcion.required' => 'Por favor adjunte obligatoriamente al menos un archivo PDF de la orden médica transcrita.',
         ]);
 
-        $ingreso = Ingreso::with('paciente')->findOrFail($datos['ingreso_id']);
-        $ingresos->guardarTranscripcion($ingreso, $request->file('pdf_transcripcion'));
+        $exito = $flujo->guardarTranscripcion(
+            (int) $datos['ingreso_id'],
+            $request->file('pdf_transcripcion', []),
+            (int) auth()->id(),
+            $datos['contiene_mipres'] ?? 'NO'
+        );
 
-        return back()->with('mensaje', 'Transcripción completada con éxito. La orden pasó a Alistamiento.');
+        return redirect()->route('transcripcion.index')->with(
+            $exito ? 'success' : 'error',
+            $exito ? 'Transcripción completada con éxito. La orden pasó a Monitoreo.' : 'Error al guardar la transcripción.'
+        );
     }
 }
